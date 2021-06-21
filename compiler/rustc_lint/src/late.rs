@@ -390,6 +390,7 @@ fn late_lint_mod_pass<'tcx, T: LateLintPass<'tcx>>(
     };
 
     let mut cx = LateContextAndPass { context, pass };
+    let err_count = tcx.sess.diagnostic().err_count();
 
     let (module, span, hir_id) = tcx.hir().get_module(module_def_id);
     cx.process_mod(module, span, hir_id);
@@ -400,6 +401,7 @@ fn late_lint_mod_pass<'tcx, T: LateLintPass<'tcx>>(
             cx.visit_attribute(hir_id, attr)
         }
     }
+    assert_eq!(err_count, tcx.sess.diagnostic().err_count());
 }
 
 pub fn late_lint_mod<'tcx, T: LateLintPass<'tcx>>(
@@ -412,6 +414,7 @@ pub fn late_lint_mod<'tcx, T: LateLintPass<'tcx>>(
         return;
     }
 
+    let err_count = tcx.sess.diagnostic().err_count();
     late_lint_mod_pass(tcx, module_def_id, builtin_lints);
 
     let mut passes: Vec<_> =
@@ -420,6 +423,8 @@ pub fn late_lint_mod<'tcx, T: LateLintPass<'tcx>>(
     if !passes.is_empty() {
         late_lint_mod_pass(tcx, module_def_id, LateLintPassObjects { lints: &mut passes[..] });
     }
+
+    assert_eq!(err_count, tcx.sess.diagnostic().err_count())
 }
 
 fn late_lint_pass_crate<'tcx, T: LateLintPass<'tcx>>(tcx: TyCtxt<'tcx>, pass: T) {
@@ -440,6 +445,7 @@ fn late_lint_pass_crate<'tcx, T: LateLintPass<'tcx>>(tcx: TyCtxt<'tcx>, pass: T)
     };
 
     let mut cx = LateContextAndPass { context, pass };
+    let err_count = tcx.sess.diagnostic().err_count();
 
     // Visit the whole crate.
     cx.with_lint_attrs(hir::CRATE_HIR_ID, |cx| {
@@ -454,11 +460,14 @@ fn late_lint_pass_crate<'tcx, T: LateLintPass<'tcx>>(tcx: TyCtxt<'tcx>, pass: T)
         }
 
         lint_callback!(cx, check_crate_post, krate);
-    })
+    });
+
+    assert_eq!(err_count, tcx.sess.diagnostic().err_count());
 }
 
 fn late_lint_crate<'tcx, T: LateLintPass<'tcx>>(tcx: TyCtxt<'tcx>, builtin_lints: T) {
     let mut passes = unerased_lint_store(tcx).late_passes.iter().map(|p| (p)()).collect::<Vec<_>>();
+    let err_count = tcx.sess.diagnostic().err_count();
 
     if !tcx.sess.opts.debugging_opts.no_interleave_lints {
         if !passes.is_empty() {
@@ -484,6 +493,8 @@ fn late_lint_crate<'tcx, T: LateLintPass<'tcx>>(tcx: TyCtxt<'tcx>, builtin_lints
             );
         }
     }
+
+    assert_eq!(err_count, tcx.sess.diagnostic().err_count());
 }
 
 /// Performs lint checking on a crate.
@@ -491,6 +502,8 @@ pub fn check_crate<'tcx, T: LateLintPass<'tcx>>(
     tcx: TyCtxt<'tcx>,
     builtin_lints: impl FnOnce() -> T + Send,
 ) {
+    let err_count = tcx.sess.diagnostic().err_count();
+
     join(
         || {
             tcx.sess.time("crate_lints", || {
@@ -507,4 +520,6 @@ pub fn check_crate<'tcx, T: LateLintPass<'tcx>>(
             });
         },
     );
+
+    assert_eq!(err_count, tcx.sess.diagnostic().err_count())
 }

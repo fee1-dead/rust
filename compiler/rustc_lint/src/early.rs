@@ -329,6 +329,7 @@ fn early_lint_crate<T: EarlyLintPass>(
         context: EarlyContext::new(sess, lint_store, krate, buffered, warn_about_weird_lints),
         pass,
     };
+    let err_count = sess.diagnostic().err_count();
 
     // Visit the whole crate.
     cx.with_lint_attrs(ast::CRATE_NODE_ID, &krate.attrs, |cx| {
@@ -340,6 +341,9 @@ fn early_lint_crate<T: EarlyLintPass>(
 
         run_early_pass!(cx, check_crate_post, krate);
     });
+
+    assert_eq!(err_count, sess.diagnostic().err_count());
+
     cx.context.buffered
 }
 
