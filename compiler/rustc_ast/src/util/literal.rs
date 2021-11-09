@@ -3,6 +3,7 @@
 use crate::ast::{self, Lit, LitKind};
 use crate::token::{self, Token};
 
+use rustc_data_structures::bigint::{FromDecStrErr, TryIntoHelper, U256};
 use rustc_lexer::unescape::{unescape_byte, unescape_char};
 use rustc_lexer::unescape::{unescape_byte_literal, unescape_literal, Mode};
 use rustc_span::symbol::{kw, sym, Symbol};
@@ -181,7 +182,7 @@ impl LitKind {
                     ast::LitIntType::Signed(ty) => Some(ty.name()),
                     ast::LitIntType::Unsuffixed => None,
                 };
-                (token::Integer, sym::integer(n), suffix)
+                (token::Integer, sym::integer(TryIntoHelper(n)), suffix)
             }
             LitKind::Float(symbol, ty) => {
                 let suffix = match ty {
@@ -311,6 +312,17 @@ fn integer_lit(symbol: Symbol, suffix: Option<Symbol>) -> Result<LitKind, LitErr
             sym::u32 => ast::LitIntType::Unsigned(ast::UintTy::U32),
             sym::u64 => ast::LitIntType::Unsigned(ast::UintTy::U64),
             sym::u128 => ast::LitIntType::Unsigned(ast::UintTy::U128),
+            sym::u256 => {
+                let ty = ast::LitIntType::Unsigned(ast::UintTy::U256);
+                if base != 10 {
+                    panic!("unsupported");
+                }
+
+                return U256::from_dec_str(&s).map(|v| LitKind::Int(v, ty)).map_err(|e| match e {
+                    FromDecStrErr::InvalidCharacter => LitError::LexerError,
+                    FromDecStrErr::InvalidLength => LitError::IntTooLarge,
+                });
+            }
             // `1f64` and `2f32` etc. are valid float literals, and
             // `fxxx` looks more like an invalid float literal than invalid integer literal.
             _ if suf.as_str().starts_with('f') => return filtered_float_lit(symbol, suffix, base),
@@ -320,7 +332,11 @@ fn integer_lit(symbol: Symbol, suffix: Option<Symbol>) -> Result<LitKind, LitErr
     };
 
     let s = &s[if base != 10 { 2 } else { 0 }..];
-    u128::from_str_radix(s, base).map(|i| LitKind::Int(i, ty)).map_err(|_| {
+    u128::from_str_radix(s, base).map(|n| {
+        let digit_l = n as u64;
+        let digit_h = (n >> 64) as u64;
+        LitKind::Int(U256([0, 0, digit_h, digit_l]), ty)
+    }).map_err(|_| {
         // Small bases are lexed as if they were base 10, e.g, the string
         // might be `0b10201`. This will cause the conversion above to fail,
         // but these kinds of errors are already reported by the lexer.

@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 indexmap = "1"
 smallvec = { version = "1.6.1", features = ["union", "may_dangle"] }
+bigint = "4.4.3"
 
 [dev-dependencies]
 rustc_macros = { path = "../rustc_macros" }

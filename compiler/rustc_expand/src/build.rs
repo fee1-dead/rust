@@ -1,5 +1,6 @@
 use crate::base::ExtCtxt;
 
+use rustc_data_structures::bigint::U256;
 use rustc_ast::attr;
 use rustc_ast::ptr::P;
 use rustc_ast::{self as ast, AttrVec, BlockCheckMode, Expr, LocalKind, PatKind, UnOp};
@@ -300,11 +301,11 @@ impl<'a> ExtCtxt<'a> {
     pub fn expr_usize(&self, span: Span, i: usize) -> P<ast::Expr> {
         self.expr_lit(
             span,
-            ast::LitKind::Int(i as u128, ast::LitIntType::Unsigned(ast::UintTy::Usize)),
+            ast::LitKind::Int(U256::from(i), ast::LitIntType::Unsigned(ast::UintTy::Usize)),
         )
     }
     pub fn expr_u32(&self, sp: Span, u: u32) -> P<ast::Expr> {
-        self.expr_lit(sp, ast::LitKind::Int(u as u128, ast::LitIntType::Unsigned(ast::UintTy::U32)))
+        self.expr_lit(sp, ast::LitKind::Int(U256::from(u), ast::LitIntType::Unsigned(ast::UintTy::U32)))
     }
     pub fn expr_bool(&self, sp: Span, value: bool) -> P<ast::Expr> {
         self.expr_lit(sp, ast::LitKind::Bool(value))

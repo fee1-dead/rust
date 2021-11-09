@@ -1085,9 +1085,11 @@ fn allow_unstable<'a>(
 
 pub fn parse_alignment(node: &ast::LitKind) -> Result<u32, &'static str> {
     if let ast::LitKind::Int(literal, ast::LitIntType::Unsuffixed) = node {
+        // fine since unsuffixed
+        let literal = literal.as_u64();
         if literal.is_power_of_two() {
             // rustc_middle::ty::layout::Align restricts align to <= 2^29
-            if *literal <= 1 << 29 { Ok(*literal as u32) } else { Err("larger than 2^29") }
+            if literal <= 1 << 29 { Ok(literal as u32) } else { Err("larger than 2^29") }
         } else {
             Err("not a power of two")
         }

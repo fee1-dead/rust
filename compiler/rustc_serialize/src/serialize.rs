@@ -11,12 +11,22 @@ use std::path;
 use std::rc::Rc;
 use std::sync::Arc;
 
+use bigint::U256;
+
 pub trait Encoder {
     type Error;
 
     // Primitive types:
     fn emit_unit(&mut self) -> Result<(), Self::Error>;
     fn emit_usize(&mut self, v: usize) -> Result<(), Self::Error>;
+    fn emit_u256(&mut self, v: U256) -> Result<(), Self::Error> {
+        let [a, b, c, d] = v.0;
+
+        self.emit_u64(a)?;
+        self.emit_u64(b)?;
+        self.emit_u64(c)?;
+        self.emit_u64(d)
+    }
     fn emit_u128(&mut self, v: u128) -> Result<(), Self::Error>;
     fn emit_u64(&mut self, v: u64) -> Result<(), Self::Error>;
     fn emit_u32(&mut self, v: u32) -> Result<(), Self::Error>;
@@ -165,6 +175,9 @@ pub trait Decoder {
     // Primitive types:
     fn read_nil(&mut self) -> Result<(), Self::Error>;
     fn read_usize(&mut self) -> Result<usize, Self::Error>;
+    fn read_u256(&mut self) -> Result<U256, Self::Error> {
+        Ok(U256([self.read_u64()?, self.read_u64()?, self.read_u64()?, self.read_u64()?]))
+    }
     fn read_u128(&mut self) -> Result<u128, Self::Error>;
     fn read_u64(&mut self) -> Result<u64, Self::Error>;
     fn read_u32(&mut self) -> Result<u32, Self::Error>;
@@ -354,6 +367,7 @@ direct_serialize_impls! {
     u32 emit_u32 read_u32,
     u64 emit_u64 read_u64,
     u128 emit_u128 read_u128,
+    U256 emit_u256 read_u256,
     isize emit_isize read_isize,
     i8 emit_i8 read_i8,
     i16 emit_i16 read_i16,

@@ -108,6 +108,28 @@ pub mod unhash;
 pub use ena::undo_log;
 pub use ena::unify;
 
+pub mod bigint {
+    use std::fmt::Display;
+    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+    pub struct TryIntoHelper(pub U256);
+    impl TryInto<usize> for TryIntoHelper {
+        type Error = ();
+
+        fn try_into(self) -> Result<usize, ()> {
+            match self.0.0 {
+                [0, 0, 0, lower] => lower.try_into().map_err(|_| ()),
+                _ => Err(())
+            }
+        }
+    }
+    impl Display for TryIntoHelper {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            Display::fmt(&self.0, f)
+        }
+    }
+    pub use bigint::*;
+}
+
 pub struct OnDrop<F: Fn()>(pub F);
 
 impl<F: Fn()> OnDrop<F> {

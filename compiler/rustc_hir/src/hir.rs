@@ -3291,7 +3291,7 @@ impl<'hir> Node<'hir> {
 #[cfg(all(target_arch = "x86_64", target_pointer_width = "64"))]
 mod size_asserts {
     rustc_data_structures::static_assert_size!(super::Block<'static>, 48);
-    rustc_data_structures::static_assert_size!(super::Expr<'static>, 64);
+    rustc_data_structures::static_assert_size!(super::Expr<'static>, 72);
     rustc_data_structures::static_assert_size!(super::Pat<'static>, 88);
     rustc_data_structures::static_assert_size!(super::QPath<'static>, 24);
     rustc_data_structures::static_assert_size!(super::Ty<'static>, 72);
