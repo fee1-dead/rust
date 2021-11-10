@@ -205,7 +205,7 @@ impl_stable_hash_via_hash!(usize);
 
 impl_stable_hash_via_hash!(u128);
 impl_stable_hash_via_hash!(i128);
-impl_stable_hash_via_hash!(bigint::U256);
+impl_stable_hash_via_hash!(crate::U256);
 
 impl_stable_hash_via_hash!(char);
 impl_stable_hash_via_hash!(());

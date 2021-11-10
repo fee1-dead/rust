@@ -1291,7 +1291,7 @@ impl CheckAttrVisitor<'tcx> {
         let mut invalid_args = vec![];
         for meta in list {
             if let Some(LitKind::Int(val, _)) = meta.literal().map(|lit| &lit.kind) {
-                if *val >= arg_count {
+                if val.as_u128() >= arg_count {
                     let span = meta.span();
                     self.tcx
                         .sess

@@ -98,6 +98,7 @@ impl CodegenCx<'ll, 'tcx> {
             ty::UintTy::U32 => self.type_i32(),
             ty::UintTy::U64 => self.type_i64(),
             ty::UintTy::U128 => self.type_i128(),
+            ty::UintTy::U256 => self.type_i256(),
         }
     }
 
@@ -156,6 +157,10 @@ impl BaseTypeMethods<'tcx> for CodegenCx<'ll, 'tcx> {
 
     fn type_i128(&self) -> &'ll Type {
         unsafe { llvm::LLVMIntTypeInContext(self.llcx, 128) }
+    }
+
+    fn type_i256(&self) -> &'ll Type {
+        unsafe { llvm::LLVMIntTypeInContext(self.llcx, 256) }
     }
 
     fn type_isize(&self) -> &'ll Type {

@@ -3430,7 +3430,7 @@ impl<'a> Resolver<'a> {
                     for meta in attr.meta_item_list()? {
                         match meta.literal()?.kind {
                             LitKind::Int(a, _) => {
-                                ret.push(a as usize);
+                                ret.push(a.as_usize());
                             }
                             _ => panic!("invalid arg index"),
                         }

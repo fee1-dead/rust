@@ -2074,6 +2074,7 @@ pub fn uint_ty(uty: ast::UintTy) -> UintTy {
         ast::UintTy::U32 => UintTy::U32,
         ast::UintTy::U64 => UintTy::U64,
         ast::UintTy::U128 => UintTy::U128,
+        ast::UintTy::U256 => UintTy::U256,
     }
 }
 
@@ -2103,6 +2104,7 @@ pub fn ast_uint_ty(uty: UintTy) -> ast::UintTy {
         UintTy::U32 => ast::UintTy::U32,
         UintTy::U64 => ast::UintTy::U64,
         UintTy::U128 => ast::UintTy::U128,
+        UintTy::U256 => ast::UintTy::U256,
     }
 }
 

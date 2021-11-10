@@ -26,7 +26,7 @@ use crate::ptr::P;
 use crate::token::{self, CommentKind, DelimToken, Token};
 use crate::tokenstream::{DelimSpan, LazyTokenStream, TokenStream, TokenTree};
 
-use rustc_data_structures::bigint::U256;
+use rustc_data_structures::U256;
 use rustc_data_structures::stable_hasher::{HashStable, StableHasher};
 use rustc_data_structures::stack::ensure_sufficient_stack;
 use rustc_data_structures::sync::Lrc;

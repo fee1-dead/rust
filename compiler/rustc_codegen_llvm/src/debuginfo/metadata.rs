@@ -911,6 +911,7 @@ impl MsvcBasicName for ty::UintTy {
             ty::UintTy::U32 => "unsigned __int32",
             ty::UintTy::U64 => "unsigned __int64",
             ty::UintTy::U128 => "unsigned __int128",
+            ty::UintTy::U256 => "unsigned __int256",
         }
     }
 }

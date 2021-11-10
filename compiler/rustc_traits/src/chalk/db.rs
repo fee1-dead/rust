@@ -230,6 +230,7 @@ impl<'tcx> chalk_solve::RustIrDatabase<RustInterner<'tcx>> for RustIrDatabase<'t
                     ast::UintTy::U32 => uint(chalk_ir::UintTy::U32),
                     ast::UintTy::U64 => uint(chalk_ir::UintTy::U64),
                     ast::UintTy::U128 => uint(chalk_ir::UintTy::U128),
+                    _ => unreachable!(),
                 },
             }),
         })

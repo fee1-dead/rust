@@ -104,6 +104,7 @@ impl IntTypeExt for attr::IntType {
             UnsignedInt(ast::UintTy::U32) => tcx.types.u32,
             UnsignedInt(ast::UintTy::U64) => tcx.types.u64,
             UnsignedInt(ast::UintTy::U128) => tcx.types.u128,
+            UnsignedInt(ast::UintTy::U256) => tcx.types.u256,
             UnsignedInt(ast::UintTy::Usize) => tcx.types.usize,
         }
     }

@@ -1,5 +1,6 @@
 use rustc_apfloat::ieee::{Double, Single};
 use rustc_apfloat::Float;
+use rustc_data_structures::U256;
 use rustc_serialize::{Decodable, Decoder, Encodable, Encoder};
 use rustc_target::abi::Size;
 use std::convert::{TryFrom, TryInto};
@@ -122,7 +123,7 @@ impl std::fmt::Debug for ConstInt {
 pub struct ScalarInt {
     /// The first `size` bytes of `data` are the value.
     /// Do not try to read less or more bytes than that. The remaining bytes must be 0.
-    data: u128,
+    data: U256,
     size: u8,
 }
 
@@ -246,7 +247,7 @@ macro_rules! from {
                 #[inline]
                 fn from(u: $ty) -> Self {
                     Self {
-                        data: u128::from(u),
+                        data: U256::from(u),
                         size: std::mem::size_of::<$ty>() as u8,
                     }
                 }
@@ -307,7 +308,7 @@ impl From<Single> for ScalarInt {
     #[inline]
     fn from(f: Single) -> Self {
         // We trust apfloat to give us properly truncated data.
-        Self { data: f.to_bits(), size: 4 }
+        Self { data: U256::from(f.to_bits()), size: 4 }
     }
 }
 
@@ -323,7 +324,7 @@ impl From<Double> for ScalarInt {
     #[inline]
     fn from(f: Double) -> Self {
         // We trust apfloat to give us properly truncated data.
-        Self { data: f.to_bits(), size: 8 }
+        Self { data: U256::from(f.to_bits()), size: 8 }
     }
 }
 

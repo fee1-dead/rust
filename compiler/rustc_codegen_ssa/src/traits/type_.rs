@@ -18,6 +18,7 @@ pub trait BaseTypeMethods<'tcx>: Backend<'tcx> {
     fn type_i32(&self) -> Self::Type;
     fn type_i64(&self) -> Self::Type;
     fn type_i128(&self) -> Self::Type;
+    fn type_i256(&self) -> Self::Type;
     fn type_isize(&self) -> Self::Type;
 
     fn type_f32(&self) -> Self::Type;
@@ -67,6 +68,7 @@ pub trait DerivedTypeMethods<'tcx>: BaseTypeMethods<'tcx> + MiscMethods<'tcx> {
             I32 => self.type_i32(),
             I64 => self.type_i64(),
             I128 => self.type_i128(),
+            I256 => self.type_i256(),
         }
     }
 

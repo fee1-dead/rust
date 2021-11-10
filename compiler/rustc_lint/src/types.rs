@@ -181,7 +181,7 @@ fn int_ty_range(int_ty: ty::IntTy) -> (i128, i128) {
     }
 }
 
-fn uint_ty_range(uint_ty: ty::UintTy) -> (u128, u128) {
+fn uint_ty_range(uint_ty: ty::UintTy) -> Option<(u128, u128)> {
     let max = match uint_ty {
         ty::UintTy::Usize => u64::MAX.into(),
         ty::UintTy::U8 => u8::MAX.into(),
@@ -189,8 +189,9 @@ fn uint_ty_range(uint_ty: ty::UintTy) -> (u128, u128) {
         ty::UintTy::U32 => u32::MAX.into(),
         ty::UintTy::U64 => u64::MAX.into(),
         ty::UintTy::U128 => u128::MAX,
+        ty::UintTy::U256 => return None,
     };
-    (0, max)
+    Some((0, max))
 }
 
 fn get_bin_hex_repr(cx: &LateContext<'_>, lit: &hir::Lit) -> Option<String> {
@@ -284,9 +285,15 @@ fn get_type_suggestion(t: Ty<'_>, val: u128, negative: bool) -> Option<&'static 
                 let _neg = if negative { 1 } else { 0 };
                 match $ty {
                     $($type => {
-                        $(if !negative && val <= uint_ty_range($utypes).1 {
-                            return Some($utypes.name_str())
-                        })*
+
+                        $(
+                            let upper = if let Some(range) = uint_ty_range($utypes) {
+                                range.1
+                            } else { return None };
+                            if !negative && val <= upper {
+                                return Some($utypes.name_str())
+                            }
+                        )*
                         $(if val <= int_ty_range($itypes).1 as u128 + _neg {
                             return Some($itypes.name_str())
                         })*
@@ -383,11 +390,13 @@ fn lint_uint_literal<'tcx>(
     t: ty::UintTy,
 ) {
     let uint_type = t.normalize(cx.sess().target.pointer_width);
-    let (min, max) = uint_ty_range(uint_type);
+    let (min, max) = if let Some(range) = uint_ty_range(uint_type) { range } else {
+        return;
+    };
     let lit_val: u128 = match lit.node {
         // _v is u8, within range by definition
         ast::LitKind::Byte(_v) => return,
-        ast::LitKind::Int(v, _) => v,
+        ast::LitKind::Int(v, _) => v.as_u128(),
         _ => bug!(),
     };
     if lit_val < min || lit_val > max {
@@ -457,7 +466,7 @@ fn lint_literal<'tcx>(
         ty::Int(t) => {
             match lit.node {
                 ast::LitKind::Int(v, ast::LitIntType::Signed(_) | ast::LitIntType::Unsuffixed) => {
-                    lint_int_literal(cx, type_limits, e, lit, t, v)
+                    lint_int_literal(cx, type_limits, e, lit, t, v.as_u128())
                 }
                 _ => bug!(),
             };
@@ -557,7 +566,7 @@ impl<'tcx> LateLintPass<'tcx> for TypeLimits {
                             ast::LitKind::Int(
                                 v,
                                 ast::LitIntType::Signed(_) | ast::LitIntType::Unsuffixed,
-                            ) => v as i128,
+                            ) => v.as_u128() as i128,
                             _ => return true,
                         },
                         _ => bug!(),
@@ -565,10 +574,12 @@ impl<'tcx> LateLintPass<'tcx> for TypeLimits {
                     is_valid(norm_binop, lit_val, min, max)
                 }
                 ty::Uint(uint_ty) => {
-                    let (min, max): (u128, u128) = uint_ty_range(uint_ty);
+                    let (min, max): (u128, u128) = if let Some(range) = uint_ty_range(uint_ty) {
+                        range
+                    } else { return true; };
                     let lit_val: u128 = match lit.kind {
                         hir::ExprKind::Lit(ref li) => match li.node {
-                            ast::LitKind::Int(v, _) => v,
+                            ast::LitKind::Int(v, _) => v.as_u128(),
                             _ => return true,
                         },
                         _ => bug!(),

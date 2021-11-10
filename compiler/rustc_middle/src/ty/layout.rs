@@ -54,11 +54,13 @@ impl IntegerExt for Integer {
             (I32, false) => tcx.types.u32,
             (I64, false) => tcx.types.u64,
             (I128, false) => tcx.types.u128,
+            (I256, false) => tcx.types.u256,
             (I8, true) => tcx.types.i8,
             (I16, true) => tcx.types.i16,
             (I32, true) => tcx.types.i32,
             (I64, true) => tcx.types.i64,
             (I128, true) => tcx.types.i128,
+            (I256, true) => unreachable!(),
         }
     }
 
@@ -72,6 +74,7 @@ impl IntegerExt for Integer {
             attr::SignedInt(ast::IntTy::I32) | attr::UnsignedInt(ast::UintTy::U32) => I32,
             attr::SignedInt(ast::IntTy::I64) | attr::UnsignedInt(ast::UintTy::U64) => I64,
             attr::SignedInt(ast::IntTy::I128) | attr::UnsignedInt(ast::UintTy::U128) => I128,
+            attr::UnsignedInt(ast::UintTy::U256) => I256,
             attr::SignedInt(ast::IntTy::Isize) | attr::UnsignedInt(ast::UintTy::Usize) => {
                 dl.ptr_sized_integer()
             }
@@ -95,6 +98,7 @@ impl IntegerExt for Integer {
             ty::UintTy::U32 => I32,
             ty::UintTy::U64 => I64,
             ty::UintTy::U128 => I128,
+            ty::UintTy::U256 => I256,
             ty::UintTy::Usize => cx.data_layout().ptr_sized_integer(),
         }
     }

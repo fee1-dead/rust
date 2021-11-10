@@ -192,6 +192,7 @@ pub struct CommonTypes<'tcx> {
     pub u32: Ty<'tcx>,
     pub u64: Ty<'tcx>,
     pub u128: Ty<'tcx>,
+    pub u256: Ty<'tcx>,
     pub f32: Ty<'tcx>,
     pub f64: Ty<'tcx>,
     pub str_: Ty<'tcx>,
@@ -905,6 +906,7 @@ impl<'tcx> CommonTypes<'tcx> {
             u32: mk(Uint(ty::UintTy::U32)),
             u64: mk(Uint(ty::UintTy::U64)),
             u128: mk(Uint(ty::UintTy::U128)),
+            u256: mk(Uint(ty::UintTy::U256)),
             f32: mk(Float(ty::FloatTy::F32)),
             f64: mk(Float(ty::FloatTy::F64)),
             str_: mk(Str),
@@ -1115,7 +1117,7 @@ impl<'tcx> TyCtxt<'tcx> {
                 &[ast::NestedMetaItem::Literal(ast::Lit { kind: ast::LitKind::Int(a, _), .. })],
             ) = attr.meta_item_list().as_deref()
             {
-                Bound::Included(a)
+                Bound::Included(a.as_u128())
             } else {
                 self.sess
                     .delay_span_bug(attr.span, "invalid rustc_layout_scalar_valid_range attribute");
@@ -2229,6 +2231,7 @@ impl<'tcx> TyCtxt<'tcx> {
             UintTy::U32 => self.types.u32,
             UintTy::U64 => self.types.u64,
             UintTy::U128 => self.types.u128,
+            UintTy::U256 => self.types.u256,
         }
     }
 

@@ -79,6 +79,11 @@ pub mod small_c_str;
 pub mod snapshot_map;
 pub mod stable_map;
 pub mod svh;
+use std::fmt::Debug;
+use std::fmt::Display;
+use std::fmt::LowerHex;
+use std::fmt::UpperHex;
+
 pub use ena::snapshot_vec;
 pub mod memmap;
 pub mod sorted_map;
@@ -108,25 +113,106 @@ pub mod unhash;
 pub use ena::undo_log;
 pub use ena::unify;
 
-pub mod bigint {
-    use std::fmt::Display;
-    #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
-    pub struct TryIntoHelper(pub U256);
-    impl TryInto<usize> for TryIntoHelper {
-        type Error = ();
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default, Encodable, Decodable)]
+pub struct U256(pub bigint::U256);
 
-        fn try_into(self) -> Result<usize, ()> {
-            match self.0.0 {
-                [0, 0, 0, lower] => lower.try_into().map_err(|_| ()),
-                _ => Err(())
+impl U256 {
+    pub fn as_usize(self) -> usize {
+        self.as_u64() as usize
+    }
+
+    pub fn as_u64(self) -> u64 {
+        self.0.as_u64()
+    }
+
+    pub fn as_u128(self) -> u128 {
+        if let [low, high, 0, 0] = self.0.0 {
+            (low as u128) | ((high as u128) << 64)
+        } else {
+            panic!("integer overflow")
+        }
+    }
+}
+
+impl TryInto<usize> for U256 {
+    type Error = ();
+
+    fn try_into(self) -> Result<usize, ()> {
+        match self.0.0 {
+            [0, 0, 0, lower] => lower.try_into().map_err(|_| ()),
+            _ => Err(())
+        }
+    }
+}
+
+impl Display for U256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.0, f)
+    }
+}
+
+impl Debug for U256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Debug::fmt(&self.0, f)
+    }
+}
+
+impl From<bigint::U256> for U256 {
+    #[inline]
+    fn from(v: bigint::U256) -> Self {
+        Self(v)
+    }
+}
+
+impl From<u128> for U256 {
+    #[inline]
+    fn from(v: u128) -> Self {
+        let low = v as u64;
+        let high = (v >> 64) as u64;
+        bigint::U256([low, high, 0, 0]).into()
+    }
+}
+
+macro_rules! from {
+    ($($tys:ident)*) => {
+        $(
+            impl From< $tys > for U256 {
+                #[inline]
+                fn from(v: $tys) -> Self {
+                    bigint::U256([v as u64, 0, 0, 0]).into()
+                }
+            }
+        )*
+    };
+}
+
+from!(u8 u16 u32 u64);
+
+impl LowerHex for U256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        LowerHex::fmt(&self.0, f)
+    }
+}
+
+impl UpperHex for U256 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let data = &self.0.0;
+        write!(f, "0x")?;
+        let mut latch = false;
+        for ch in data.iter().rev() {
+            for x in 0..16 {
+                let nibble = (ch & (15u64 << ((15 - x) * 4) as u64)) >> (((15 - x) * 4) as u64);
+                if !latch { latch = nibble != 0 }
+                if latch {
+                    write!(f, "{:X}", nibble)?;
+                }
             }
         }
+        Ok(())
     }
-    impl Display for TryIntoHelper {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            Display::fmt(&self.0, f)
-        }
-    }
+}
+
+pub mod bigint {
     pub use bigint::*;
 }
 

@@ -293,6 +293,7 @@ pub enum UintTy {
     U32,
     U64,
     U128,
+    U256,
 }
 
 impl UintTy {
@@ -304,6 +305,7 @@ impl UintTy {
             UintTy::U32 => "u32",
             UintTy::U64 => "u64",
             UintTy::U128 => "u128",
+            UintTy::U256 => "u256",
         }
     }
 
@@ -315,6 +317,7 @@ impl UintTy {
             UintTy::U32 => 32,
             UintTy::U64 => 64,
             UintTy::U128 => 128,
+            UintTy::U256 => 256,
         })
     }
 

@@ -26,6 +26,7 @@ pub struct TargetDataLayout {
     pub i32_align: AbiAndPrefAlign,
     pub i64_align: AbiAndPrefAlign,
     pub i128_align: AbiAndPrefAlign,
+    pub i256_align: AbiAndPrefAlign,
     pub f32_align: AbiAndPrefAlign,
     pub f64_align: AbiAndPrefAlign,
     pub pointer_size: Size,
@@ -53,6 +54,7 @@ impl Default for TargetDataLayout {
             i32_align: AbiAndPrefAlign::new(align(32)),
             i64_align: AbiAndPrefAlign { abi: align(32), pref: align(64) },
             i128_align: AbiAndPrefAlign { abi: align(32), pref: align(64) },
+            i256_align: AbiAndPrefAlign { abi: align(32), pref: align(64) },
             f32_align: AbiAndPrefAlign::new(align(32)),
             f64_align: AbiAndPrefAlign::new(align(64)),
             pointer_size: Size::from_bits(64),
@@ -603,6 +605,7 @@ pub enum Integer {
     I32,
     I64,
     I128,
+    I256,
 }
 
 impl Integer {
@@ -614,6 +617,7 @@ impl Integer {
             I32 => Size::from_bytes(4),
             I64 => Size::from_bytes(8),
             I128 => Size::from_bytes(16),
+            I256 => Size::from_bytes(32),
         }
     }
 
@@ -626,6 +630,7 @@ impl Integer {
             I32 => dl.i32_align,
             I64 => dl.i64_align,
             I128 => dl.i128_align,
+            I256 => dl.i256_align,
         }
     }
 
