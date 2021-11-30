@@ -2480,7 +2480,7 @@ impl AsRef<[u8]> for str {
 #[rustc_const_unstable(feature = "const_default_impls", issue = "87864")]
 impl const Default for &str {
     /// Creates an empty str
-    #[inline]
+    #[inline(always)]
     fn default() -> Self {
         ""
     }
