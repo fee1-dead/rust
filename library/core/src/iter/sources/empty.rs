@@ -22,6 +22,10 @@ pub const fn empty<T>() -> Empty<T> {
     Empty(marker::PhantomData)
 }
 
+#[cfg(bootstrap)]
+#[cfg_attr(bootstrap, allow(dead_code))]
+struct Fixme; // FIXME remove `FnReturning` and just use `fn() -> T`.
+
 // Newtype for use in `PhantomData` to avoid
 // > error: const-stable function cannot use `#[feature(const_fn_fn_ptr_basics)]`
 // in `const fn empty<T>()` above.

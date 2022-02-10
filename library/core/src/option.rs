@@ -1471,7 +1471,7 @@ impl<T> Option<T> {
     where
         T: ~const Default,
     {
-        #[rustc_allow_const_fn_unstable(const_fn_trait_bound)]
+        #[cfg_attr(bootstrap, rustc_allow_const_fn_unstable(const_fn_trait_bound))]
         const fn default<T: ~const Default>() -> T {
             T::default()
         }

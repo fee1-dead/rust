@@ -1,6 +1,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(bootstrap, feature(const_fn_trait_bound))]
 #![feature(
-    const_fn_trait_bound,
     decl_macro,
     platform_intrinsics,
     repr_simd,

@@ -142,7 +142,7 @@
 #![feature(cfg_sanitize)]
 #![feature(cfg_target_has_atomic)]
 #![feature(const_deref)]
-#![feature(const_fn_trait_bound)]
+#![cfg_attr(bootstrap, feature(const_fn_trait_bound))]
 #![feature(const_mut_refs)]
 #![feature(const_ptr_write)]
 #![feature(const_precise_live_drops)]
