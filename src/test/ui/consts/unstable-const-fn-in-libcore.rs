@@ -6,7 +6,6 @@
 #![stable(feature = "core", since = "1.6.0")]
 #![feature(rustc_const_unstable)]
 #![feature(staged_api)]
-#![feature(const_fn_trait_bound)]
 
 enum Opt<T> {
     Some(T),

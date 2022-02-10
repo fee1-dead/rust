@@ -1,5 +1,5 @@
 error[E0015]: calls in constant functions are limited to constant functions, tuple structs and tuple variants
-  --> $DIR/default-method-body-is-const-same-trait-ck.rs:10:9
+  --> $DIR/default-method-body-is-const-same-trait-ck.rs:9:9
    |
 LL |         ().a()
    |         ^^^^^^

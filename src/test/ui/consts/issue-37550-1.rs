@@ -1,6 +1,7 @@
+// check-pass
 const fn x() {
     let t = true;
-    let x = || t; //~ ERROR function pointer
+    let x = || t;
 }
 
 fn main() {}

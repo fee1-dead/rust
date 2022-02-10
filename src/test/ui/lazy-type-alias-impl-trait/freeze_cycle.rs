@@ -1,6 +1,6 @@
 // check-pass
 
-#![feature(gen_future, generator_trait, negative_impls, const_fn_trait_bound, const_impl_trait)]
+#![feature(gen_future, generator_trait, negative_impls, const_impl_trait)]
 
 use std::ops::{Generator, GeneratorState};
 use std::task::{Poll, Context};
