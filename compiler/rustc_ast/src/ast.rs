@@ -1274,6 +1274,7 @@ impl Expr {
             ExprKind::Paren(..) => ExprPrecedence::Paren,
             ExprKind::Try(..) => ExprPrecedence::Try,
             ExprKind::Yield(..) => ExprPrecedence::Yield,
+            ExprKind::Yeet(..) => ExprPrecedence::Yeet,
             ExprKind::Err => ExprPrecedence::Err,
         }
     }
@@ -1460,6 +1461,10 @@ pub enum ExprKind {
 
     /// A `yield`, with an optional value to be yielded.
     Yield(Option<P<Expr>>),
+
+    /// A `do yeet` (aka `throw`/`fail`/`bail`/`raise`/whatever),
+    /// with an optional value to be returned.
+    Yeet(Option<P<Expr>>),
 
     /// Placeholder for an expression that wasn't syntactically well formed in some way.
     Err,
