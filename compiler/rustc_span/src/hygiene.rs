@@ -1163,7 +1163,7 @@ impl DesugaringKind {
             DesugaringKind::Await => "`await` expression",
             DesugaringKind::QuestionMark => "operator `?`",
             DesugaringKind::TryBlock => "`try` block",
-            DesugaringKind::YeetExpr => "`do yeet` expression",
+            DesugaringKind::YeetExpr => "`k#yeet` expression",
             DesugaringKind::OpaqueTy => "`impl Trait`",
             DesugaringKind::ForLoop => "`for` loop",
             DesugaringKind::LetElse => "`let...else`",

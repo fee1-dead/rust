@@ -3,7 +3,7 @@
 #![feature(yeet_expr)]
 
 fn always_yeet() -> Result<i32, String> {
-    do yeet "hello";
+    k#"hello";
 }
 
 fn main() {

@@ -413,7 +413,7 @@ impl<T> Residual<T> for NeverShortCircuitResidual {
 }
 
 /// Implement `FromResidual<Yeet<T>>` on your type to enable
-/// `do yeet expr` syntax in functions returning your type.
-#[unstable(feature = "do_yeet_experiment", issue = "88888888")]
+/// `k#yeet expr` syntax in functions returning your type.
+#[unstable(feature = "yeet_experiment", issue = "88888888")]
 #[derive(Debug)]
 pub struct Yeet<T>(pub T);

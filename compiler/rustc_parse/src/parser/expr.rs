@@ -1373,7 +1373,7 @@ impl<'a> Parser<'a> {
             self.parse_break_expr(attrs)
         } else if self.eat_keyword(kw::Yield) {
             self.parse_yield_expr(attrs)
-        } else if self.is_do_yeet() {
+        } else if self.check(&token::RawKeyword(sym::yeet)) {
             self.parse_yeet_expr(attrs)
         } else if self.eat_keyword(kw::Let) {
             self.parse_let_expr(attrs)
@@ -1604,15 +1604,14 @@ impl<'a> Parser<'a> {
         self.maybe_recover_from_bad_qpath(expr, true)
     }
 
-    /// Parse `"do" "yeet" expr?`.
+    /// Parse `"k#yeet" expr?`.
     fn parse_yeet_expr(&mut self, attrs: AttrVec) -> PResult<'a, P<Expr>> {
         let lo = self.token.span;
 
-        self.bump(); // `do`
-        self.bump(); // `yeet`
+        self.bump();
 
         let kind = ExprKind::Yeet(self.parse_expr_opt()?);
-
+    
         let span = lo.to(self.prev_token.span);
         self.sess.gated_spans.gate(sym::yeet_expr, span);
         let expr = self.mk_expr(span, kind, attrs);
@@ -2688,10 +2687,6 @@ impl<'a> Parser<'a> {
             && self.is_keyword_ahead(1, &[kw::Catch])
             && self.look_ahead(2, |t| *t == token::OpenDelim(token::Brace))
             && !self.restrictions.contains(Restrictions::NO_STRUCT_LITERAL)
-    }
-
-    fn is_do_yeet(&self) -> bool {
-        self.token.is_keyword(kw::Do) && self.is_keyword_ahead(1, &[kw::Yeet])
     }
 
     fn is_try_block(&self) -> bool {

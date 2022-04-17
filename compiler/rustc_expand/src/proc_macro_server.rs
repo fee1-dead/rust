@@ -149,6 +149,11 @@ impl FromInternal<(TreeAndSpacing, &'_ mut Vec<Self>, &mut Rustc<'_, '_>)>
                 stack.push(tt!(Ident::new(rustc.sess(), ident.name, false)));
                 tt!(Punct::new('\'', true))
             }
+            RawKeyword(name) => {
+                stack.push(tt!(Ident::new(rustc.sess(), sym::k, true)));
+                stack.push(tt!(Punct::new('#', true)));
+                tt!(Ident::new(rustc.sess(), name, true))
+            }
             Literal(lit) => tt!(Literal { lit }),
             DocComment(_, attr_style, data) => {
                 let mut escaped = String::new();

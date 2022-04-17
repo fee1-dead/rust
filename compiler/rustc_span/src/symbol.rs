@@ -101,7 +101,6 @@ symbols! {
         MacroRules:         "macro_rules",
         Raw:                "raw",
         Union:              "union",
-        Yeet:               "yeet",
     }
 
     // Pre-interned symbols that can be referred to with `rustc_span::sym::*`.
@@ -802,6 +801,7 @@ symbols! {
         item_like_imports,
         iter,
         iter_repeat,
+        k,
         keyword,
         kind,
         kreg,
@@ -1535,6 +1535,7 @@ symbols! {
         x87_reg,
         xer,
         xmm_reg,
+        yeet,
         yeet_desugar_details,
         yeet_expr,
         ymm_reg,

@@ -1462,7 +1462,7 @@ pub enum ExprKind {
     /// A `yield`, with an optional value to be yielded.
     Yield(Option<P<Expr>>),
 
-    /// A `do yeet` (aka `throw`/`fail`/`bail`/`raise`/whatever),
+    /// A `k#yeet` (aka `throw`/`fail`/`bail`/`raise`/whatever),
     /// with an optional value to be returned.
     Yeet(Option<P<Expr>>),
 

@@ -624,7 +624,7 @@ impl<'a> Visitor<'a> for PostExpansionVisitor<'a> {
                     &self,
                     yeet_expr,
                     e.span,
-                    "`do yeet` expression is experimental"
+                    "`k#yeet` expression is experimental"
                 );
             }
             ast::ExprKind::Block(_, Some(label)) => {

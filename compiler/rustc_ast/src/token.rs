@@ -224,6 +224,9 @@ pub enum TokenKind {
     /// It's recommended to use `Token::(ident,uninterpolate,uninterpolated_span)` to
     /// treat regular and interpolated identifiers in the same way.
     Ident(Symbol, /* is_raw */ bool),
+
+    RawKeyword(Symbol),
+
     /// Lifetime identifier token.
     /// Do not forget about `NtLifetime` when you want to match on lifetime identifiers.
     /// It's recommended to use `Token::(lifetime,uninterpolate,uninterpolated_span)` to
@@ -650,7 +653,7 @@ impl Token {
             Le | EqEq | Ne | Ge | AndAnd | OrOr | Tilde | BinOpEq(..) | At | DotDotDot
             | DotDotEq | Comma | Semi | ModSep | RArrow | LArrow | FatArrow | Pound | Dollar
             | Question | OpenDelim(..) | CloseDelim(..) | Literal(..) | Ident(..)
-            | Lifetime(..) | Interpolated(..) | DocComment(..) | Eof => return None,
+            | Lifetime(..) | Interpolated(..) | DocComment(..) | Eof | RawKeyword(..) => return None,
         };
 
         Some(Token::new(kind, self.span.to(joint.span)))

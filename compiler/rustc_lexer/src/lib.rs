@@ -68,6 +68,8 @@ pub enum TokenKind {
     InvalidIdent,
     /// "r#ident"
     RawIdent,
+    /// "k#keyword"
+    RawKeyword,
     /// An unknown prefix like `foo#`, `foo'`, `foo"`. Note that only the
     /// prefix (`foo`) is included in the token, not the separator (which is
     /// lexed as its own distinct token). In Rust 2021 and later, reserved
@@ -326,6 +328,11 @@ impl Cursor<'_> {
                 _ => self.ident_or_unknown_prefix(),
             },
 
+            'k' => match (self.first(), self.second()) {
+                ('#', c1) if is_id_start(c1) => self.raw_keyword(),
+                _ => self.ident_or_unknown_prefix(),
+            }
+
             // Byte literal, byte string literal, raw byte string literal or identifier.
             'b' => match (self.first(), self.second()) {
                 ('\'', _) => {
@@ -489,6 +496,15 @@ impl Cursor<'_> {
         // Eat the identifier part of RawIdent.
         self.eat_identifier();
         RawIdent
+    }
+
+    fn raw_keyword(&mut self) -> TokenKind {
+        debug_assert!(self.prev() == 'k' && self.first() == '#' && is_id_start(self.second()));
+        // Eat "#" symbol.
+        self.bump();
+        // Eat the identifier part of RawKeyword.
+        self.eat_identifier();
+        RawKeyword
     }
 
     fn ident_or_unknown_prefix(&mut self) -> TokenKind {

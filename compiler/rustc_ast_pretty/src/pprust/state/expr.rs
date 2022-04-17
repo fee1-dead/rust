@@ -505,15 +505,6 @@ impl<'a> State<'a> {
                     self.print_expr_maybe_paren(expr, parser::PREC_JUMP);
                 }
             }
-            ast::ExprKind::Yeet(ref result) => {
-                self.word("do");
-                self.word(" ");
-                self.word("yeet");
-                if let Some(ref expr) = *result {
-                    self.word(" ");
-                    self.print_expr_maybe_paren(expr, parser::PREC_JUMP);
-                }
-            }
             ast::ExprKind::InlineAsm(ref a) => {
                 self.word("asm!");
                 self.print_inline_asm(a);
@@ -526,6 +517,14 @@ impl<'a> State<'a> {
             }
             ast::ExprKind::Yield(ref e) => {
                 self.word("yield");
+
+                if let Some(ref expr) = *e {
+                    self.space();
+                    self.print_expr_maybe_paren(expr, parser::PREC_JUMP);
+                }
+            }
+            ast::ExprKind::Yeet(ref e) => {
+                self.word("k#yeet");
 
                 if let Some(ref expr) = *e {
                     self.space();

@@ -544,7 +544,7 @@ declare_features! (
     (active, used_with_arg, "1.60.0", Some(93798), None),
     /// Allows `extern "wasm" fn`
     (active, wasm_abi, "1.53.0", Some(83788), None),
-    /// Allows `do yeet` expressions
+    /// Allows `k#yeet` expressions
     (active, yeet_expr, "1.62.0", Some(88888888), None),
     // !!!!    !!!!    !!!!    !!!!   !!!!    !!!!    !!!!    !!!!    !!!!    !!!!    !!!!
     // Features are listed in alphabetical order. Tidy will fail if you don't keep it this way.

@@ -3,7 +3,7 @@
 #![feature(yeet_expr)]
 
 fn always_yeet() -> Option<String> {
-    do yeet;
+    k#yeet;
 }
 
 fn main() {

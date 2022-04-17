@@ -222,6 +222,11 @@ impl<'a> StringReader<'a> {
                 }
                 token::Ident(sym, is_raw_ident)
             }
+            rustc_lexer::TokenKind::RawKeyword => {
+                let ident_start = start + BytePos(2);
+                let sym = nfc_normalize(self.str_from(ident_start));
+                token::RawKeyword(sym)
+            }
             rustc_lexer::TokenKind::InvalidIdent
                 // Do not recover an identifier with emoji if the codepoint is a confusable
                 // with a recoverable substitution token, like `➖`.

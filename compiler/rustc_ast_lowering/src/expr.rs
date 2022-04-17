@@ -1545,7 +1545,7 @@ impl<'hir> LoweringContext<'_, 'hir> {
         )
     }
 
-    /// Desugar `ExprKind::Yeet` from: `do yeet <expr>` into:
+    /// Desugar `ExprKind::Yeet` from: `k#yeet <expr>` into:
     /// ```rust
     /// // If there is an enclosing `try {...}`:
     /// break 'catch_target FromResidual::from_residual(Yeet(residual)),
