@@ -1,4 +1,6 @@
 use crate::iter::{InPlaceIterable, Iterator};
+#[cfg(not(bootstrap))]
+use crate::marker::Destruct;
 use crate::ops::{ChangeOutputType, ControlFlow, FromResidual, Residual, Try};
 
 mod array_chunks;
@@ -150,9 +152,7 @@ pub(crate) struct GenericShunt<'a, I, R> {
     residual: &'a mut Option<R>,
 }
 
-/// Process the given iterator as if it yielded a the item's `Try::Output`
-/// type instead. Any `Try::Residual`s encountered will stop the inner iterator
-/// and be propagated back to the overall result.
+#[cfg(bootstrap)]
 pub(crate) fn try_process<I, T, R, F, U>(iter: I, mut f: F) -> ChangeOutputType<I::Item, U>
 where
     I: Iterator<Item: Try<Output = T, Residual = R>>,
@@ -168,6 +168,29 @@ where
     }
 }
 
+/// Process the given iterator as if it yielded a the item's `Try::Output`
+/// type instead. Any `Try::Residual`s encountered will stop the inner iterator
+/// and be propagated back to the overall result.
+#[cfg(not(bootstrap))]
+pub(crate) const fn try_process<I, T, R, F, U>(iter: I, mut f: F) -> ChangeOutputType<I::Item, U>
+where
+    I: ~const Iterator,
+    I::Item: ~const Try<Output = T, Residual = R>,
+    for<'a> F: ~const FnMut(GenericShunt<'a, I, R>) -> U,
+    F: ~const Destruct,
+    R: ~const Residual<U>,
+    U: ~const Destruct,
+{
+    let mut residual = None;
+    let shunt = GenericShunt { iter, residual: &mut residual };
+    let value = f(shunt);
+    match residual {
+        Some(r) => FromResidual::from_residual(r),
+        None => Try::from_output(value),
+    }
+}
+
+#[cfg(bootstrap)]
 impl<I, R> Iterator for GenericShunt<'_, I, R>
 where
     I: Iterator<Item: Try<Residual = R>>,
@@ -204,6 +227,65 @@ where
     }
 
     impl_fold_via_try_fold! { fold -> try_fold }
+}
+
+#[cfg(not(bootstrap))]
+impl<I, R> const Iterator for GenericShunt<'_, I, R>
+where
+    I: ~const Iterator,
+    I::Item: ~const Try<Residual = R>,
+    R: ~const Destruct,
+{
+    type Item = <I::Item as Try>::Output;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.try_for_each(ControlFlow::Break).break_value()
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        if self.residual.is_some() {
+            (0, Some(0))
+        } else {
+            let (_, upper) = self.iter.size_hint();
+            (0, upper)
+        }
+    }
+
+    fn try_fold<B, F, T>(&mut self, init: B, f: F) -> T
+    where
+        F: ~const FnMut(B, Self::Item) -> T + ~const Destruct,
+        T: ~const Try<Output = B>,
+    {
+        const fn try_fold_impl<B, F, T, Item>(
+            (f, residual): &mut (F, &mut Option<Item::Residual>),
+            (acc, x): (B, Item),
+        ) -> ControlFlow<T, B>
+        where
+            F: ~const FnMut(B, Item::Output) -> T,
+            Item: ~const Try,
+            T: ~const Try<Output = B>,
+            Item::Residual: ~const Destruct,
+        {
+            match Try::branch(x) {
+                ControlFlow::Continue(x) => ControlFlow::from_try(f(acc, x)),
+                ControlFlow::Break(r) => {
+                    **residual = Some(r);
+                    ControlFlow::Break(try { acc })
+                }
+            }
+        }
+        let mut tuple = (f, &mut *self.residual);
+        self.iter.try_fold(init, ConstFnMutClosure::new(&mut tuple, try_fold_impl)).into_try()
+    }
+
+    fn fold<B, F>(mut self, init: B, mut fold: F) -> B
+    where
+        Self: Sized,
+        F: ~const FnMut(B, Self::Item) -> B + ~const Destruct,
+        Self: ~const Destruct,
+    {
+        self.try_fold(init, ConstFnMutClosure::new(&mut fold, NeverShortCircuit::wrap_mut_2_imp)).0
+    }
 }
 
 #[unstable(issue = "none", feature = "inplace_iteration")]

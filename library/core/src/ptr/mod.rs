@@ -487,7 +487,8 @@ mod mut_ptr;
 #[stable(feature = "drop_in_place", since = "1.8.0")]
 #[lang = "drop_in_place"]
 #[allow(unconditional_recursion)]
-pub unsafe fn drop_in_place<T: ?Sized>(to_drop: *mut T) {
+#[rustc_const_unstable(feature = "const_ptr_drop_in_place", issue = "none")]
+pub const unsafe fn drop_in_place<T: ?Sized>(to_drop: *mut T) {
     // Code here does not matter - this is replaced by the
     // real drop glue by the compiler.
 

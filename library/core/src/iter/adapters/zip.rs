@@ -1,7 +1,11 @@
 use crate::cmp;
 use crate::fmt::{self, Debug};
+#[cfg(not(bootstrap))]
+use crate::intrinsics::const_eval_select;
 use crate::iter::{DoubleEndedIterator, ExactSizeIterator, FusedIterator, Iterator};
 use crate::iter::{InPlaceIterable, SourceIter, TrustedLen};
+#[cfg(not(bootstrap))]
+use crate::marker::Destruct;
 
 /// An iterator that iterates two other iterators simultaneously.
 ///
@@ -19,10 +23,38 @@ pub struct Zip<A, B> {
     a_len: usize,
 }
 impl<A: Iterator, B: Iterator> Zip<A, B> {
+    #[cfg(bootstrap)]
     pub(in crate::iter) fn new(a: A, b: B) -> Zip<A, B> {
         ZipImpl::new(a, b)
     }
+    #[cfg(not(bootstrap))]
+    pub(in crate::iter) const fn new(a: A, b: B) -> Zip<A, B>
+    where
+        A: ~const Iterator,
+        B: ~const Iterator,
+        A::Item: ~const Destruct,
+        B::Item: ~const Destruct,
+    {
+        ZipImpl::new(a, b)
+    }
+    #[cfg(bootstrap)]
     fn super_nth(&mut self, mut n: usize) -> Option<(A::Item, B::Item)> {
+        while let Some(x) = Iterator::next(self) {
+            if n == 0 {
+                return Some(x);
+            }
+            n -= 1;
+        }
+        None
+    }
+    #[cfg(not(bootstrap))]
+    const fn super_nth(&mut self, mut n: usize) -> Option<(A::Item, B::Item)>
+    where
+        A: ~const Iterator,
+        B: ~const Iterator,
+        A::Item: ~const Destruct,
+        B::Item: ~const Destruct,
+    {
         while let Some(x) = Iterator::next(self) {
             if n == 0 {
                 return Some(x);
@@ -72,10 +104,45 @@ where
 }
 
 #[stable(feature = "rust1", since = "1.0.0")]
-impl<A, B> Iterator for Zip<A, B>
+#[cfg(bootstrap)]
+impl<A: Iterator, B: Iterator> Iterator for Zip<A, B> {
+    type Item = (A::Item, B::Item);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        ZipImpl::next(self)
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        ZipImpl::size_hint(self)
+    }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        ZipImpl::nth(self, n)
+    }
+
+    #[inline]
+    unsafe fn __iterator_get_unchecked(&mut self, idx: usize) -> Self::Item
+    where
+        Self: TrustedRandomAccessNoCoerce,
+    {
+        // SAFETY: `ZipImpl::__iterator_get_unchecked` has same safety
+        // requirements as `Iterator::__iterator_get_unchecked`.
+        unsafe { ZipImpl::get_unchecked(self, idx) }
+    }
+}
+
+#[stable(feature = "rust1", since = "1.0.0")]
+#[rustc_const_unstable(feature = "const_iter", issue = "92476")]
+#[cfg(not(bootstrap))]
+impl<A, B> const Iterator for Zip<A, B>
 where
-    A: Iterator,
-    B: Iterator,
+    A: ~const Iterator,
+    B: ~const Iterator,
+    A::Item: ~const Destruct,
+    B::Item: ~const Destruct,
 {
     type Item = (A::Item, B::Item);
 
@@ -119,6 +186,7 @@ where
 
 // Zip specialization trait
 #[doc(hidden)]
+#[const_trait]
 trait ZipImpl<A, B> {
     type Item;
     fn new(a: A, b: B) -> Self;
@@ -150,6 +218,7 @@ macro_rules! zip_impl_general_defaults {
         }
 
         #[inline]
+        #[cfg_attr(not(bootstrap), rustc_allow_const_fn_unstable(const_try, const_for))]
         default fn next(&mut self) -> Option<(A::Item, B::Item)> {
             let x = self.a.next()?;
             let y = self.b.next()?;
@@ -164,8 +233,8 @@ macro_rules! zip_impl_general_defaults {
         #[inline]
         default fn next_back(&mut self) -> Option<(A::Item, B::Item)>
         where
-            A: DoubleEndedIterator + ExactSizeIterator,
-            B: DoubleEndedIterator + ExactSizeIterator,
+            A: ~const DoubleEndedIterator + ~const ExactSizeIterator,
+            B: ~const DoubleEndedIterator + ~const ExactSizeIterator,
         {
             // The function body below only uses `self.a/b.len()` and `self.a/b.next_back()`
             // and doesn’t call `next_back` too often, so this implementation is safe in
@@ -176,12 +245,17 @@ macro_rules! zip_impl_general_defaults {
             if a_sz != b_sz {
                 // Adjust a, b to equal length
                 if a_sz > b_sz {
-                    for _ in 0..a_sz - b_sz {
+                    // FIXME(const_trait_impl): replace with `for`
+                    let mut i = 0;
+                    while i < a_sz - b_sz {
                         self.a.next_back();
+                        i += 1;
                     }
                 } else {
-                    for _ in 0..b_sz - a_sz {
+                    let mut i = 0;
+                    while i < b_sz - a_sz {
                         self.b.next_back();
+                        i += 1;
                     }
                 }
             }
@@ -196,6 +270,7 @@ macro_rules! zip_impl_general_defaults {
 
 // General Zip impl
 #[doc(hidden)]
+#[cfg(bootstrap)]
 impl<A, B> ZipImpl<A, B> for Zip<A, B>
 where
     A: Iterator,
@@ -231,6 +306,45 @@ where
 }
 
 #[doc(hidden)]
+#[cfg(not(bootstrap))]
+impl<A, B> const ZipImpl<A, B> for Zip<A, B>
+where
+    A: ~const Iterator,
+    B: ~const Iterator,
+    A::Item: ~const Destruct,
+    B::Item: ~const Destruct,
+{
+    type Item = (A::Item, B::Item);
+
+    zip_impl_general_defaults! {}
+
+    #[inline]
+    default fn size_hint(&self) -> (usize, Option<usize>) {
+        let (a_lower, a_upper) = self.a.size_hint();
+        let (b_lower, b_upper) = self.b.size_hint();
+
+        let lower = cmp::min(a_lower, b_lower);
+
+        let upper = match (a_upper, b_upper) {
+            (Some(x), Some(y)) => Some(cmp::min(x, y)),
+            (Some(x), None) => Some(x),
+            (None, Some(y)) => Some(y),
+            (None, None) => None,
+        };
+
+        (lower, upper)
+    }
+
+    default unsafe fn get_unchecked(&mut self, _idx: usize) -> <Self as Iterator>::Item
+    where
+        Self: TrustedRandomAccessNoCoerce,
+    {
+        panic!("internal error: entered unreachable code: Always specialized");
+    }
+}
+
+#[doc(hidden)]
+#[cfg(bootstrap)]
 impl<A, B> ZipImpl<A, B> for Zip<A, B>
 where
     A: TrustedRandomAccessNoCoerce + Iterator,
@@ -254,6 +368,33 @@ where
 }
 
 #[doc(hidden)]
+#[cfg(not(bootstrap))]
+impl<A, B> const ZipImpl<A, B> for Zip<A, B>
+where
+    A: ~const TrustedRandomAccessNoCoerce + ~const Iterator,
+    B: ~const TrustedRandomAccessNoCoerce + ~const Iterator,
+    A::Item: ~const Destruct,
+    B::Item: ~const Destruct,
+{
+    zip_impl_general_defaults! {}
+
+    #[inline]
+    default fn size_hint(&self) -> (usize, Option<usize>) {
+        let size = cmp::min(self.a.size(), self.b.size());
+        (size, Some(size))
+    }
+
+    #[inline]
+    unsafe fn get_unchecked(&mut self, idx: usize) -> <Self as Iterator>::Item {
+        let idx = self.index + idx;
+        // SAFETY: the caller must uphold the contract for
+        // `Iterator::__iterator_get_unchecked`.
+        unsafe { (self.a.__iterator_get_unchecked(idx), self.b.__iterator_get_unchecked(idx)) }
+    }
+}
+
+#[doc(hidden)]
+#[cfg(bootstrap)]
 impl<A, B> ZipImpl<A, B> for Zip<A, B>
 where
     A: TrustedRandomAccess + Iterator,
@@ -353,6 +494,149 @@ where
                 if B::MAY_HAVE_SIDE_EFFECT && sz_b > self.len {
                     for _ in 0..sz_b - self.len {
                         self.b.next_back();
+                    }
+                }
+            }
+        }
+        if self.index < self.len {
+            // since get_unchecked executes code which can panic we increment the counters beforehand
+            // so that the same index won't be accessed twice, as required by TrustedRandomAccess
+            self.len -= 1;
+            self.a_len -= 1;
+            let i = self.len;
+            // SAFETY: `i` is smaller than the previous value of `self.len`,
+            // which is also smaller than or equal to `self.a.len()` and `self.b.len()`
+            unsafe {
+                Some((self.a.__iterator_get_unchecked(i), self.b.__iterator_get_unchecked(i)))
+            }
+        } else {
+            None
+        }
+    }
+}
+
+#[doc(hidden)]
+#[cfg(not(bootstrap))]
+impl<A, B> const ZipImpl<A, B> for Zip<A, B>
+where
+    A: ~const TrustedRandomAccess + ~const Iterator,
+    B: ~const TrustedRandomAccess + ~const Iterator,
+    A::Item: ~const Destruct,
+    B::Item: ~const Destruct,
+{
+    fn new(a: A, b: B) -> Self {
+        let a_len = a.size();
+        let len = cmp::min(a_len, b.size());
+        Zip { a, b, index: 0, len, a_len }
+    }
+
+    #[inline]
+    fn next(&mut self) -> Option<(A::Item, B::Item)> {
+        if self.index < self.len {
+            let i = self.index;
+            // since get_unchecked executes code which can panic we increment the counters beforehand
+            // so that the same index won't be accessed twice, as required by TrustedRandomAccess
+            self.index += 1;
+            // SAFETY: `i` is smaller than `self.len`, thus smaller than `self.a.len()` and `self.b.len()`
+            unsafe {
+                Some((self.a.__iterator_get_unchecked(i), self.b.__iterator_get_unchecked(i)))
+            }
+        } else if A::MAY_HAVE_SIDE_EFFECT && self.index < self.a_len {
+            let i = self.index;
+            // as above, increment before executing code that may panic
+            self.index += 1;
+            self.len += 1;
+            // match the base implementation's potential side effects
+            // SAFETY: we just checked that `i` < `self.a.len()`
+            unsafe {
+                self.a.__iterator_get_unchecked(i);
+            }
+            None
+        } else {
+            None
+        }
+    }
+
+    #[inline]
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len - self.index;
+        (len, Some(len))
+    }
+
+    #[inline]
+    fn nth(&mut self, n: usize) -> Option<Self::Item> {
+        let delta = cmp::min(n, self.len - self.index);
+        let end = self.index + delta;
+        while self.index < end {
+            let i = self.index;
+            // since get_unchecked executes code which can panic we increment the counters beforehand
+            // so that the same index won't be accessed twice, as required by TrustedRandomAccess
+            self.index += 1;
+            if A::MAY_HAVE_SIDE_EFFECT {
+                // SAFETY: the usage of `cmp::min` to calculate `delta`
+                // ensures that `end` is smaller than or equal to `self.len`,
+                // so `i` is also smaller than `self.len`.
+                unsafe {
+                    self.a.__iterator_get_unchecked(i);
+                }
+            }
+            if B::MAY_HAVE_SIDE_EFFECT {
+                // SAFETY: same as above.
+                unsafe {
+                    self.b.__iterator_get_unchecked(i);
+                }
+            }
+        }
+
+        self.super_nth(n - delta)
+    }
+
+    #[inline]
+    fn next_back(&mut self) -> Option<(A::Item, B::Item)>
+    where
+        A: ~const DoubleEndedIterator + ~const ExactSizeIterator,
+        B: ~const DoubleEndedIterator + ~const ExactSizeIterator,
+    {
+        if A::MAY_HAVE_SIDE_EFFECT || B::MAY_HAVE_SIDE_EFFECT {
+            let sz_a = self.a.size();
+            let sz_b = self.b.size();
+            // Adjust a, b to equal length, make sure that only the first call
+            // of `next_back` does this, otherwise we will break the restriction
+            // on calls to `self.next_back()` after calling `get_unchecked()`.
+            if sz_a != sz_b {
+                let sz_a = self.a.size();
+                if A::MAY_HAVE_SIDE_EFFECT && sz_a > self.len {
+                    // FIXME(const_trait_impl): replace with `for`
+                    let mut i = 0;
+                    while i < sz_a - self.len {
+                        // since next_back() may panic we increment the counters beforehand
+                        // to keep Zip's state in sync with the underlying iterator source
+                        self.a_len -= 1;
+                        self.a.next_back();
+                        i += 1;
+                    }
+                    #[track_caller]
+                    fn assert_rt(a: usize, b: usize) {
+                        debug_assert_eq!(a, b);
+                    }
+                    const fn assert_ct(a: usize, b: usize) {
+                        if a == b {
+                            return;
+                        }
+                        panic!("assertion failed")
+                    }
+                    // SAFETY: only panicking
+                    unsafe {
+                        const_eval_select((self.a_len, self.len), assert_ct, assert_rt);
+                    }
+                }
+                let sz_b = self.b.size();
+                if B::MAY_HAVE_SIDE_EFFECT && sz_b > self.len {
+                    // FIXME(const_trait_impl): replace with `for`
+                    let mut i = 0;
+                    while i < sz_a - self.len {
+                        self.b.next_back();
+                        i += 1;
                     }
                 }
             }
@@ -520,7 +804,7 @@ impl<A: Debug + TrustedRandomAccessNoCoerce, B: Debug + TrustedRandomAccessNoCoe
 #[doc(hidden)]
 #[unstable(feature = "trusted_random_access", issue = "none")]
 #[rustc_specialization_trait]
-pub unsafe trait TrustedRandomAccess: TrustedRandomAccessNoCoerce {}
+pub unsafe trait TrustedRandomAccess: ~const TrustedRandomAccessNoCoerce {}
 
 /// Like [`TrustedRandomAccess`] but without any of the requirements / guarantees around
 /// coercions to subtypes after `__iterator_get_unchecked` (they aren’t allowed here!), and
@@ -554,28 +838,32 @@ pub unsafe trait TrustedRandomAccessNoCoerce: Sized {
 /// Same requirements calling `get_unchecked` directly.
 #[doc(hidden)]
 #[inline]
-pub(in crate::iter::adapters) unsafe fn try_get_unchecked<I>(it: &mut I, idx: usize) -> I::Item
+pub(in crate::iter::adapters) const unsafe fn try_get_unchecked<I>(
+    it: &mut I,
+    idx: usize,
+) -> I::Item
 where
-    I: Iterator,
+    I: ~const Iterator,
 {
     // SAFETY: the caller must uphold the contract for
     // `Iterator::__iterator_get_unchecked`.
     unsafe { it.try_get_unchecked(idx) }
 }
 
+#[const_trait]
 unsafe trait SpecTrustedRandomAccess: Iterator {
     /// If `Self: TrustedRandomAccess`, it must be safe to call
     /// `Iterator::__iterator_get_unchecked(self, index)`.
     unsafe fn try_get_unchecked(&mut self, index: usize) -> Self::Item;
 }
 
-unsafe impl<I: Iterator> SpecTrustedRandomAccess for I {
+unsafe impl<I: ~const Iterator> const SpecTrustedRandomAccess for I {
     default unsafe fn try_get_unchecked(&mut self, _: usize) -> Self::Item {
         panic!("Should only be called on TrustedRandomAccess iterators");
     }
 }
 
-unsafe impl<I: Iterator + TrustedRandomAccessNoCoerce> SpecTrustedRandomAccess for I {
+unsafe impl<I: ~const Iterator + TrustedRandomAccessNoCoerce> const SpecTrustedRandomAccess for I {
     #[inline]
     unsafe fn try_get_unchecked(&mut self, index: usize) -> Self::Item {
         // SAFETY: the caller must uphold the contract for
