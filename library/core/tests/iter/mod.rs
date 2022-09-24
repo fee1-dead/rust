@@ -100,3 +100,17 @@ pub fn extend_for_unit() {
     }
     assert_eq!(x, 5);
 }
+
+#[test]
+fn test_const_iter() {
+    const X: usize = {
+        let mut n = 0;
+        for a in Some(1) {
+            n = a;
+        }
+        n
+    };
+
+    const _: () = assert!(X == 1);
+    assert_eq!(1, X);
+}
