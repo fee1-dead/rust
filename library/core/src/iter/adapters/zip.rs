@@ -371,8 +371,8 @@ where
 #[cfg(not(bootstrap))]
 impl<A, B> const ZipImpl<A, B> for Zip<A, B>
 where
-    A: ~const TrustedRandomAccessNoCoerce + ~const Iterator,
-    B: ~const TrustedRandomAccessNoCoerce + ~const Iterator,
+    A: TrustedRandomAccessNoCoerce + ~const Iterator,
+    B: TrustedRandomAccessNoCoerce + ~const Iterator,
     A::Item: ~const Destruct,
     B::Item: ~const Destruct,
 {
@@ -380,7 +380,7 @@ where
 
     #[inline]
     default fn size_hint(&self) -> (usize, Option<usize>) {
-        let size = cmp::min(self.a.size(), self.b.size());
+        let size = cmp::min(self.a.size_hint().0, self.b.size_hint().0);
         (size, Some(size))
     }
 
@@ -519,14 +519,14 @@ where
 #[cfg(not(bootstrap))]
 impl<A, B> const ZipImpl<A, B> for Zip<A, B>
 where
-    A: ~const TrustedRandomAccess + ~const Iterator,
-    B: ~const TrustedRandomAccess + ~const Iterator,
+    A: TrustedRandomAccess + ~const Iterator,
+    B: TrustedRandomAccess + ~const Iterator,
     A::Item: ~const Destruct,
     B::Item: ~const Destruct,
 {
     fn new(a: A, b: B) -> Self {
-        let a_len = a.size();
-        let len = cmp::min(a_len, b.size());
+        let a_len = a.size_hint().0;
+        let len = cmp::min(a_len, b.size_hint().0);
         Zip { a, b, index: 0, len, a_len }
     }
 
@@ -598,13 +598,13 @@ where
         B: ~const DoubleEndedIterator + ~const ExactSizeIterator,
     {
         if A::MAY_HAVE_SIDE_EFFECT || B::MAY_HAVE_SIDE_EFFECT {
-            let sz_a = self.a.size();
-            let sz_b = self.b.size();
+            let sz_a = self.a.size_hint().0;
+            let sz_b = self.b.size_hint().0;
             // Adjust a, b to equal length, make sure that only the first call
             // of `next_back` does this, otherwise we will break the restriction
             // on calls to `self.next_back()` after calling `get_unchecked()`.
             if sz_a != sz_b {
-                let sz_a = self.a.size();
+                let sz_a = self.a.size_hint().0;
                 if A::MAY_HAVE_SIDE_EFFECT && sz_a > self.len {
                     // FIXME(const_trait_impl): replace with `for`
                     let mut i = 0;
@@ -631,7 +631,7 @@ where
                         const_eval_select((self.a_len, self.len), assert_ct, assert_rt);
                     }
                 }
-                let sz_b = self.b.size();
+                let sz_b = self.b.size_hint().0;
                 if B::MAY_HAVE_SIDE_EFFECT && sz_b > self.len {
                     // FIXME(const_trait_impl): replace with `for`
                     let mut i = 0;
@@ -805,7 +805,8 @@ impl<A: Debug + TrustedRandomAccessNoCoerce, B: Debug + TrustedRandomAccessNoCoe
 #[doc(hidden)]
 #[unstable(feature = "trusted_random_access", issue = "none")]
 #[rustc_specialization_trait]
-pub unsafe trait TrustedRandomAccess: ~const TrustedRandomAccessNoCoerce {}
+#[const_trait]
+pub unsafe trait TrustedRandomAccess: TrustedRandomAccessNoCoerce {}
 
 /// Like [`TrustedRandomAccess`] but without any of the requirements / guarantees around
 /// coercions to subtypes after `__iterator_get_unchecked` (they aren’t allowed here!), and
@@ -822,7 +823,7 @@ pub unsafe trait TrustedRandomAccessNoCoerce: Sized {
     // Convenience method.
     fn size(&self) -> usize
     where
-        Self: Iterator,
+        Self: ~const Iterator,
     {
         self.size_hint().0
     }

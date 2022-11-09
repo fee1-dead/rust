@@ -1,6 +1,10 @@
+#[cfg(not(bootstrap))]
+use crate::const_closure::ConstFnMutClosure;
 use crate::iter::{InPlaceIterable, Iterator};
 #[cfg(not(bootstrap))]
 use crate::marker::Destruct;
+#[cfg(not(bootstrap))]
+use crate::ops::NeverShortCircuit;
 use crate::ops::{ChangeOutputType, ControlFlow, FromResidual, Residual, Try};
 
 mod array_chunks;

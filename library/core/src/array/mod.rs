@@ -853,6 +853,14 @@ where
 ///
 /// To minimize indirection fields are still pub but callers should at least use
 /// `push_unchecked` to signal that something unsafe is going on.
+#[cfg(not(bootstrap))]
+pub(crate) struct Guard<'a, T: ~const Destruct, const N: usize> {
+    /// The array to be initialized.
+    pub array_mut: &'a mut [MaybeUninit<T>; N],
+    /// The number of items that have been initialized so far.
+    pub initialized: usize,
+}
+#[cfg(bootstrap)]
 pub(crate) struct Guard<'a, T: Destruct, const N: usize> {
     /// The array to be initialized.
     pub array_mut: &'a mut [MaybeUninit<T>; N],
