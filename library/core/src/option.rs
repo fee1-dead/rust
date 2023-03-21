@@ -1966,12 +1966,9 @@ impl<T> Option<&T> {
     where
         T: Copy,
     {
-        // FIXME: this implementation, which sidesteps using `Option::map` since it's not const
-        // ready yet, should be reverted when possible to avoid code repetition
-        match self {
-            Some(&v) => Some(v),
-            None => None,
-        }
+        // Note that const closures are unstable. If this gets stabilized as const
+        // before const closures, a manual implementation should be used.
+        self.map(const |x| *x)
     }
 
     /// Maps an `Option<&T>` to an `Option<T>` by cloning the contents of the
@@ -1993,10 +1990,7 @@ impl<T> Option<&T> {
     where
         T: ~const Clone,
     {
-        match self {
-            Some(t) => Some(t.clone()),
-            None => None,
-        }
+        self.map(Clone::clone)
     }
 }
 
