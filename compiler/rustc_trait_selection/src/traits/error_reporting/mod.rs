@@ -344,7 +344,8 @@ impl<'tcx> InferCtxtExt<'tcx> for InferCtxt<'tcx> {
         &self,
         param_env: ty::ParamEnv<'tcx>,
         ty: ty::Binder<'tcx, Ty<'tcx>>,
-        constness: ty::BoundConstness,
+        // TODO #110395
+        _constness: ty::BoundConstness,
         polarity: ty::ImplPolarity,
     ) -> Result<(ty::ClosureKind, ty::Binder<'tcx, Ty<'tcx>>), ()> {
         self.commit_if_ok(|_| {
@@ -365,7 +366,7 @@ impl<'tcx> InferCtxtExt<'tcx> for InferCtxt<'tcx> {
                     self.tcx,
                     ObligationCause::dummy(),
                     param_env,
-                    ty.rebind(ty::TraitPredicate { trait_ref, constness, polarity }),
+                    ty.rebind(ty::TraitPredicate { trait_ref, polarity }),
                 );
                 let ocx = ObligationCtxt::new_in_snapshot(self);
                 ocx.register_obligation(obligation);
@@ -661,11 +662,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                 match bound_predicate.skip_binder() {
                     ty::PredicateKind::Clause(ty::Clause::Trait(trait_predicate)) => {
                         let trait_predicate = bound_predicate.rebind(trait_predicate);
-                        let mut trait_predicate = self.resolve_vars_if_possible(trait_predicate);
-
-                        trait_predicate.remap_constness_diag(obligation.param_env);
-                        let predicate_is_const = ty::BoundConstness::ConstIfConst
-                            == trait_predicate.skip_binder().constness;
+                        let trait_predicate = self.resolve_vars_if_possible(trait_predicate);
 
                         if self.tcx.sess.has_errors().is_some()
                             && trait_predicate.references_error()
@@ -696,7 +693,9 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                         let is_try_conversion = self.is_try_conversion(span, trait_ref.def_id());
                         let is_unsize =
                             Some(trait_ref.def_id()) == self.tcx.lang_items().unsize_trait();
-                        let (message, note, append_const_msg) = if is_try_conversion {
+
+                        // TODO: 110395, append_const_msg
+                        let (message, note, _append_const_msg) = if is_try_conversion {
                             (
                                 Some(format!(
                                     "`?` couldn't convert the error to `{}`",
@@ -713,29 +712,12 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                             (message, note, append_const_msg)
                         };
 
-                        let err_msg = message
-                            .and_then(|cannot_do_this| {
-                                match (predicate_is_const, append_const_msg) {
-                                    // do nothing if predicate is not const
-                                    (false, _) => Some(cannot_do_this),
-                                    // suggested using default post message
-                                    (true, Some(None)) => {
-                                        Some(format!("{cannot_do_this} in const contexts"))
-                                    }
-                                    // overridden post message
-                                    (true, Some(Some(post_message))) => {
-                                        Some(format!("{cannot_do_this}{post_message}"))
-                                    }
-                                    // fallback to generic message
-                                    (true, None) => None,
-                                }
-                            })
-                            .unwrap_or_else(|| {
-                                format!(
-                                    "the trait bound `{}` is not satisfied{}",
-                                    trait_predicate, post_message,
-                                )
-                            });
+                        let err_msg = message.unwrap_or_else(|| {
+                            format!(
+                                "the trait bound `{}` is not satisfied{}",
+                                trait_predicate, post_message,
+                            )
+                        });
 
                         let (err_msg, safe_transmute_explanation) = if Some(trait_ref.def_id())
                             == self.tcx.lang_items().transmute_trait()
@@ -780,13 +762,14 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                                 _ => {}
                             }
                         }
-
+                        /* // FIXME(#110395)
                         if Some(trait_ref.def_id()) == tcx.lang_items().drop_trait()
                             && predicate_is_const
                         {
                             err.note("`~const Drop` was renamed to `~const Destruct`");
                             err.note("See <https://github.com/rust-lang/rust/pull/94901> for more details");
                         }
+                        */
 
                         let explanation = if let ObligationCauseCode::MainFunctionType =
                             obligation.cause.code()
@@ -851,9 +834,10 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                             self.suggest_borrowing_for_object_cast(&mut err, &root_obligation, *concrete_ty, *obj_ty);
                         }
 
+                        /* FIXME(#110395)
                         let mut unsatisfied_const = false;
                         if trait_predicate.is_const_if_const() && obligation.param_env.is_const() {
-                            let non_const_predicate = trait_ref.without_const();
+                            let non_const_predicate = trait_ref;
                             let non_const_obligation = Obligation {
                                 cause: obligation.cause.clone(),
                                 param_env: obligation.param_env.without_const(),
@@ -873,6 +857,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                                 );
                             }
                         }
+                        */
 
                         if let Some((msg, span)) = type_def {
                             err.span_label(span, &msg);
@@ -976,7 +961,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                             && let Ok((implemented_kind, params)) = self.type_implements_fn_trait(
                             obligation.param_env,
                             trait_ref.self_ty(),
-                            trait_predicate.skip_binder().constness,
+                            ty::BoundConstness::NotConst,
                             trait_predicate.skip_binder().polarity,
                         )
                         {
@@ -1045,7 +1030,7 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                                 None,
                                 obligation.cause.body_id,
                             );
-                        } else if !suggested && !unsatisfied_const {
+                        } else if !suggested {
                             // Can't show anything else useful, try to find similar impls.
                             let impl_candidates = self.find_similar_impl_candidates(trait_predicate);
                             if !self.report_similar_impl_candidates(

@@ -719,7 +719,7 @@ impl<'tcx> PolyExistentialPredicate<'tcx> {
         use crate::ty::ToPredicate;
         match self.skip_binder() {
             ExistentialPredicate::Trait(tr) => {
-                self.rebind(tr).with_self_ty(tcx, self_ty).without_const().to_predicate(tcx)
+                self.rebind(tr).with_self_ty(tcx, self_ty).to_predicate(tcx)
             }
             ExistentialPredicate::Projection(p) => {
                 self.rebind(p.with_self_ty(tcx, self_ty)).to_predicate(tcx)
@@ -735,7 +735,7 @@ impl<'tcx> PolyExistentialPredicate<'tcx> {
                         ty::InternalSubsts::extend_with_error(tcx, did, &[self_ty.into()]);
                     tcx.mk_trait_ref(did, err_substs)
                 };
-                self.rebind(trait_ref).without_const().to_predicate(tcx)
+                self.rebind(trait_ref).to_predicate(tcx)
             }
         }
     }

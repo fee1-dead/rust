@@ -128,7 +128,7 @@ pub fn type_known_to_meet_bound_modulo_regions<'tcx>(
     def_id: DefId,
 ) -> bool {
     let trait_ref = ty::Binder::dummy(infcx.tcx.mk_trait_ref(def_id, [ty]));
-    pred_known_to_hold_modulo_regions(infcx, param_env, trait_ref.without_const())
+    pred_known_to_hold_modulo_regions(infcx, param_env, trait_ref)
 }
 
 /// FIXME(@lcnr): this function doesn't seem right and shouldn't exist?

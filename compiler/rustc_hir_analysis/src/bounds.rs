@@ -41,9 +41,10 @@ impl<'tcx> Bounds<'tcx> {
         tcx: TyCtxt<'tcx>,
         trait_ref: ty::PolyTraitRef<'tcx>,
         span: Span,
-        constness: ty::BoundConstness,
+        // TODO: 110395
+        _constness: ty::BoundConstness,
     ) {
-        self.predicates.push((trait_ref.with_constness(constness).to_predicate(tcx), span));
+        self.predicates.push((trait_ref.to_predicate(tcx), span));
     }
 
     pub fn push_projection_bound(
@@ -59,7 +60,7 @@ impl<'tcx> Bounds<'tcx> {
         let sized_def_id = tcx.require_lang_item(LangItem::Sized, Some(span));
         let trait_ref = ty::Binder::dummy(tcx.mk_trait_ref(sized_def_id, [ty]));
         // Preferable to put this obligation first, since we report better errors for sized ambiguity.
-        self.predicates.insert(0, (trait_ref.without_const().to_predicate(tcx), span));
+        self.predicates.insert(0, (trait_ref.to_predicate(tcx), span));
     }
 
     pub fn predicates(&self) -> impl Iterator<Item = (ty::Predicate<'tcx>, Span)> + '_ {

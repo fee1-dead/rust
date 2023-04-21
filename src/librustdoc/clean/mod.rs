@@ -330,11 +330,12 @@ fn clean_poly_trait_predicate<'tcx>(
     cx: &mut DocContext<'tcx>,
 ) -> Option<WherePredicate> {
     // `T: ~const Destruct` is hidden because `T: Destruct` is a no-op.
-    if pred.skip_binder().constness == ty::BoundConstness::ConstIfConst
+    // TODO: #110395
+    /*if pred.skip_binder().constness == ty::BoundConstness::ConstIfConst
         && Some(pred.skip_binder().def_id()) == cx.tcx.lang_items().destruct_trait()
     {
         return None;
-    }
+    }*/
 
     let poly_trait_ref = pred.map_bound(|pred| pred.trait_ref);
     Some(WherePredicate::BoundPredicate {

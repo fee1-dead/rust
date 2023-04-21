@@ -1214,14 +1214,8 @@ fn check_impl<'tcx>(
                     Some(WellFormedLoc::Ty(item.hir_id().expect_owner().def_id)),
                     trait_ref,
                 );
-                let trait_pred = ty::TraitPredicate {
-                    trait_ref,
-                    constness: match constness {
-                        hir::Constness::Const => ty::BoundConstness::ConstIfConst,
-                        hir::Constness::NotConst => ty::BoundConstness::NotConst,
-                    },
-                    polarity: ty::ImplPolarity::Positive,
-                };
+                let trait_pred =
+                    ty::TraitPredicate { trait_ref, polarity: ty::ImplPolarity::Positive };
                 let mut obligations = traits::wf::trait_obligations(
                     wfcx.infcx,
                     wfcx.param_env,

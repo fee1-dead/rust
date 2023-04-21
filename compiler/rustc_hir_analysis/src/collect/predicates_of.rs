@@ -42,7 +42,8 @@ pub(super) fn predicates_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::GenericPredic
         // an obligation and instead be skipped. Otherwise we'd use
         // `tcx.def_span(def_id);`
 
-        let constness = if tcx.has_attr(def_id, sym::const_trait) {
+        // TODO: #110395 create poly trait ref with constness
+        let _constness = if tcx.has_attr(def_id, sym::const_trait) {
             ty::BoundConstness::ConstIfConst
         } else {
             ty::BoundConstness::NotConst
@@ -51,7 +52,7 @@ pub(super) fn predicates_of(tcx: TyCtxt<'_>, def_id: DefId) -> ty::GenericPredic
         let span = rustc_span::DUMMY_SP;
         result.predicates =
             tcx.arena.alloc_from_iter(result.predicates.iter().copied().chain(std::iter::once((
-                ty::TraitRef::identity(tcx, def_id).with_constness(constness).to_predicate(tcx),
+                ty::TraitRef::identity(tcx, def_id).to_predicate(tcx),
                 span,
             ))));
     }
@@ -137,7 +138,7 @@ fn gather_explicit_predicates_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Gen
     // (see below). Recall that a default impl is not itself an impl, but rather a
     // set of defaults that can be incorporated into another impl.
     if let Some(trait_ref) = is_default_impl_trait {
-        predicates.insert((trait_ref.without_const().to_predicate(tcx), tcx.def_span(def_id)));
+        predicates.insert((trait_ref.to_predicate(tcx), tcx.def_span(def_id)));
     }
 
     // Collect the region predicates that were declared inline as
@@ -723,8 +724,7 @@ pub(super) fn type_param_predicates(
                     if param_id == item_hir_id {
                         let identity_trait_ref =
                             ty::TraitRef::identity(tcx, item_def_id.to_def_id());
-                        extend =
-                            Some((identity_trait_ref.without_const().to_predicate(tcx), item.span));
+                        extend = Some((identity_trait_ref.to_predicate(tcx), item.span));
                     }
                     generics
                 }

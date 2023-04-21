@@ -151,7 +151,6 @@ where
         match predicate.kind().skip_binder() {
             ty::PredicateKind::Clause(ty::Clause::Trait(ty::TraitPredicate {
                 trait_ref,
-                constness: _,
                 polarity: _,
             })) => self.visit_trait(trait_ref),
             ty::PredicateKind::Clause(ty::Clause::Projection(ty::ProjectionPredicate {

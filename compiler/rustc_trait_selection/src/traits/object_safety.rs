@@ -601,7 +601,6 @@ fn virtual_call_violation_for_method<'tcx>(
         // implement auto traits if the underlying type does as well.
         if let ty::PredicateKind::Clause(ty::Clause::Trait(ty::TraitPredicate {
             trait_ref: pred_trait_ref,
-            constness: ty::BoundConstness::NotConst,
             polarity: ty::ImplPolarity::Positive,
         })) = pred.kind().skip_binder()
             && pred_trait_ref.self_ty() == tcx.types.self_param
@@ -772,7 +771,6 @@ fn receiver_is_dispatchable<'tcx>(
         let unsize_predicate = ty::Binder::dummy(
             tcx.mk_trait_ref(unsize_did, [tcx.types.self_param, unsized_self_ty]),
         )
-        .without_const()
         .to_predicate(tcx);
 
         // U: Trait<Arg1, ..., ArgN>

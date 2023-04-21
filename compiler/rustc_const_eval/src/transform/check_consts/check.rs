@@ -764,8 +764,7 @@ impl<'tcx> Visitor<'tcx> for Checker<'_, 'tcx> {
                     }
 
                     let trait_ref = TraitRef::from_method(tcx, trait_id, substs);
-                    let poly_trait_pred =
-                        Binder::dummy(trait_ref).with_constness(ty::BoundConstness::ConstIfConst);
+                    let poly_trait_pred = Binder::dummy(trait_ref);
                     let obligation =
                         Obligation::new(tcx, ObligationCause::dummy(), param_env, poly_trait_pred);
 

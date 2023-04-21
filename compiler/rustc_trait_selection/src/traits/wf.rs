@@ -329,11 +329,7 @@ impl<'tcx> WfPredicates<'tcx> {
         let trait_ref = &trait_pred.trait_ref;
 
         // if the trait predicate is not const, the wf obligations should not be const as well.
-        let obligations = if trait_pred.constness == ty::BoundConstness::NotConst {
-            self.nominal_obligations_without_const(trait_ref.def_id, trait_ref.substs)
-        } else {
-            self.nominal_obligations(trait_ref.def_id, trait_ref.substs)
-        };
+        let obligations = self.nominal_obligations(trait_ref.def_id, trait_ref.substs);
 
         debug!("compute_trait_pred obligations {:?}", obligations);
         let param_env = self.param_env;
@@ -454,7 +450,7 @@ impl<'tcx> WfPredicates<'tcx> {
                 cause,
                 self.recursion_depth,
                 self.param_env,
-                ty::Binder::dummy(trait_ref).without_const(),
+                ty::Binder::dummy(trait_ref),
             ));
         }
     }

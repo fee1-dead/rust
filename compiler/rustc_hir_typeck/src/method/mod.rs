@@ -321,15 +321,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
         // Construct an obligation
         let poly_trait_ref = ty::Binder::dummy(trait_ref);
-        (
-            traits::Obligation::new(
-                self.tcx,
-                cause,
-                self.param_env,
-                poly_trait_ref.without_const(),
-            ),
-            substs,
-        )
+        (traits::Obligation::new(self.tcx, cause, self.param_env, poly_trait_ref), substs)
     }
 
     /// `lookup_method_in_trait` is used for overloaded operators.

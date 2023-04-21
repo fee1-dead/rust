@@ -76,7 +76,7 @@ pub(super) fn prepare_vtable_segments<'tcx, T>(
 
     let mut emit_vptr_on_new_entry = false;
     let mut visited = PredicateSet::new(tcx);
-    let predicate = trait_ref.without_const().to_predicate(tcx);
+    let predicate = trait_ref.to_predicate(tcx);
     let mut stack: SmallVec<[(ty::PolyTraitRef<'tcx>, _, _); 5]> =
         smallvec![(trait_ref, emit_vptr_on_new_entry, None)];
     visited.insert(predicate);

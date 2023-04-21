@@ -61,7 +61,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
             ParamCandidate(param) => {
                 let obligations =
                     self.confirm_param_candidate(obligation, param.map_bound(|t| t.trait_ref));
-                ImplSource::Param(obligations, param.skip_binder().constness)
+                ImplSource::Param(obligations, ty::BoundConstness::NotConst)
             }
 
             ImplCandidate(impl_def_id) => {
@@ -630,7 +630,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
             // function is a trait method
             if let ty::FnDef(def_id, substs) = self_ty.kind() && let Some(trait_id) = tcx.trait_of_item(*def_id) {
                 let trait_ref = TraitRef::from_method(tcx, trait_id, *substs);
-                let poly_trait_pred = Binder::dummy(trait_ref).with_constness(ty::BoundConstness::ConstIfConst);
+                let poly_trait_pred = Binder::dummy(trait_ref);
                 let obligation = Obligation::new(tcx, cause.clone(), obligation.param_env, poly_trait_pred);
                 nested.push(obligation);
             }
@@ -1052,7 +1052,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                 // We can only make objects from sized types.
                 let tr =
                     ty::Binder::dummy(tcx.at(cause.span).mk_trait_ref(LangItem::Sized, [source]));
-                nested.push(predicate_to_obligation(tr.without_const().to_predicate(tcx)));
+                nested.push(predicate_to_obligation(tr.to_predicate(tcx)));
 
                 // If the type is `Foo + 'a`, ensure that the type
                 // being cast to `Foo + 'a` outlives `'a`:
@@ -1275,7 +1275,6 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                                 .tcx()
                                 .at(cause.span)
                                 .mk_trait_ref(LangItem::Destruct, [nested_ty]),
-                            constness: ty::BoundConstness::ConstIfConst,
                             polarity: ty::ImplPolarity::Positive,
                         }),
                         &mut nested,
@@ -1299,7 +1298,6 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                             .tcx()
                             .at(cause.span)
                             .mk_trait_ref(LangItem::Destruct, [nested_ty]),
-                        constness: ty::BoundConstness::ConstIfConst,
                         polarity: ty::ImplPolarity::Positive,
                     });
 
