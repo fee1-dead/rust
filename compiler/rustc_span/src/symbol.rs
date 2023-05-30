@@ -793,6 +793,7 @@ symbols! {
         hexagon_target_feature,
         hidden,
         homogeneous_aggregate,
+        host,
         html_favicon_url,
         html_logo_url,
         html_no_source,

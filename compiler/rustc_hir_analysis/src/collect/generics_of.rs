@@ -9,7 +9,7 @@ use rustc_hir::def_id::LocalDefId;
 use rustc_middle::ty::{self, TyCtxt};
 use rustc_session::lint;
 use rustc_span::symbol::{kw, Symbol};
-use rustc_span::Span;
+use rustc_span::{sym, Span};
 
 pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
     use rustc_hir::*;
@@ -182,9 +182,11 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
 
     let no_generics = hir::Generics::empty();
     let ast_generics = node.generics().unwrap_or(&no_generics);
+    // whether generics should have a `const host: bool` param added.
+    let mut has_host_effect = false;
     let (opt_self, allow_defaults) = match node {
         Node::Item(item) => {
-            match item.kind {
+            match &item.kind {
                 ItemKind::Trait(..) | ItemKind::TraitAlias(..) => {
                     // Add in the self type parameter.
                     //
@@ -201,6 +203,8 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
                         },
                     });
 
+                    has_host_effect = tcx.has_attr(def_id, sym::const_trait);
+
                     (opt_self, Defaults::Allowed)
                 }
                 ItemKind::TyAlias(..)
@@ -208,15 +212,48 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
                 | ItemKind::Struct(..)
                 | ItemKind::OpaqueTy(..)
                 | ItemKind::Union(..) => (None, Defaults::Allowed),
+
+                ItemKind::Impl(Impl { constness, .. })
+                | ItemKind::Fn(FnSig { header: FnHeader { constness, .. }, .. }, _, _) => {
+                    if !tcx.has_attr(def_id, sym::rustc_do_not_const_check) {
+                        has_host_effect = matches!(constness, Constness::Const);
+                    }
+                    (None, Defaults::FutureCompatDisallowed)
+                }
                 _ => (None, Defaults::FutureCompatDisallowed),
             }
         }
 
+        Node::Expr(expr) => {
+            match expr.kind {
+                ExprKind::Closure(closure) => {
+                    has_host_effect = matches!(closure.constness, Constness::Const);
+                }
+                _ => {}
+            }
+            (None, Defaults::FutureCompatDisallowed)
+        }
+
+        Node::ImplItem(item) => {
+            match item.kind {
+                ImplItemKind::Fn(FnSig { header: FnHeader { constness, .. }, .. }, ..) => {
+                    has_host_effect = matches!(constness, Constness::Const);
+                }
+                _ => {}
+            }
+            // GAT
+            (
+                None,
+                if matches!(item.kind, ImplItemKind::Type(..)) {
+                    Defaults::Deny
+                } else {
+                    Defaults::FutureCompatDisallowed
+                },
+            )
+        }
+
         // GATs
         Node::TraitItem(item) if matches!(item.kind, TraitItemKind::Type(..)) => {
-            (None, Defaults::Deny)
-        }
-        Node::ImplItem(item) if matches!(item.kind, ImplItemKind::Type(..)) => {
             (None, Defaults::Deny)
         }
 
@@ -234,7 +271,9 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
         generics.parent_count + generics.params.len()
     });
 
-    let mut params: Vec<_> = Vec::with_capacity(ast_generics.params.len() + has_self as usize);
+    let mut params: Vec<_> = Vec::with_capacity(
+        ast_generics.params.len() + has_self as usize + has_host_effect as usize,
+    );
 
     if let Some(opt_self) = opt_self {
         params.push(opt_self);
@@ -345,6 +384,16 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
             pure_wrt_drop: false,
             kind: ty::GenericParamDefKind::Type { has_default: false, synthetic: false },
         });
+    }
+
+    if has_host_effect {
+        params.push(ty::GenericParamDef {
+            index: next_index(),
+            name: sym::host,
+            def_id: def_id.to_def_id(),
+            pure_wrt_drop: false,
+            kind: ty::GenericParamDefKind::Const { has_default: true },
+        })
     }
 
     let param_def_id_to_index = params.iter().map(|param| (param.def_id, param.index)).collect();
