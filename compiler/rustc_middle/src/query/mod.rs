@@ -219,6 +219,7 @@ rustc_queries! {
         desc { |tcx| "computing const default for a given parameter `{}`", tcx.def_path_str(param)  }
         cache_on_disk_if { param.is_local() }
         separate_provide_extern
+        feedable
     }
 
     /// Returns the [`Ty`][rustc_middle::ty::Ty] of the given [`DefId`]. If the [`DefId`] points

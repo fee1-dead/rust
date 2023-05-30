@@ -1,4 +1,5 @@
 use crate::middle::resolve_bound_vars as rbv;
+use hir::definitions::DefPathData;
 use hir::{
     intravisit::{self, Visitor},
     GenericParamKind, HirId, Node,
@@ -6,7 +7,7 @@ use hir::{
 use rustc_hir as hir;
 use rustc_hir::def::DefKind;
 use rustc_hir::def_id::LocalDefId;
-use rustc_middle::ty::{self, TyCtxt};
+use rustc_middle::ty::{self, EarlyBinder, TyCtxt};
 use rustc_session::lint;
 use rustc_span::symbol::{kw, Symbol};
 use rustc_span::{sym, Span};
@@ -387,10 +388,19 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
     }
 
     if has_host_effect {
+        let host_param =
+            tcx.at(tcx.def_span(def_id)).create_def(def_id, DefPathData::ValueNs(sym::host));
+        // set the default of the `host` effect to `true`, allowing non-const functions such as
+        // FFI and I/O.
+        // TODO don't set default for function generic params
+        host_param.const_param_default(EarlyBinder::bind(tcx.consts.true_));
+        host_param.opt_local_def_id_to_hir_id(None);
+        host_param.opt_def_kind(Some(DefKind::ConstParam));
+        host_param.type_of(EarlyBinder::bind(tcx.types.bool));
         params.push(ty::GenericParamDef {
             index: next_index(),
             name: sym::host,
-            def_id: def_id.to_def_id(),
+            def_id: host_param.def_id().to_def_id(),
             pure_wrt_drop: false,
             kind: ty::GenericParamDefKind::Const { has_default: true },
         })
