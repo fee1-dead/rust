@@ -6,7 +6,8 @@ use crate::type_error_struct;
 use rustc_ast::util::parser::PREC_POSTFIX;
 use rustc_errors::{struct_span_err, Applicability, Diagnostic, ErrorGuaranteed, StashKey};
 use rustc_hir as hir;
-use rustc_hir::def::{self, CtorKind, Namespace, Res};
+use rustc_hir::HirId;
+use rustc_hir::def::{self, CtorKind, DefKind, Namespace, Res};
 use rustc_hir::def_id::DefId;
 use rustc_hir_analysis::autoderef::Autoderef;
 use rustc_infer::{
@@ -480,6 +481,37 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         }
 
         fn_sig.output()
+    }
+
+    /// Enforce that the type we are calling also allows turning off the `host` effect if the caller
+    /// allows it too.
+    pub(super) fn enforce_context_effects(&self, call_expr_hir: HirId, span: Span, callee_ty: Ty<'tcx>) {
+        let tcx = self.tcx;
+        if tcx.sess.opts.unstable_opts.unleash_the_miri_inside_of_you {
+            return;
+        }
+        if callee_ty.references_error() {
+            return;
+        }
+
+        // Compute the constness required by the context.
+        let context = tcx.hir().enclosing_body_owner(call_expr_hir);
+        if tcx.has_attr(context.to_def_id(), sym::rustc_do_not_const_check) {
+            trace!("do not const check this context");
+            return;
+        }
+        let kind = tcx.def_kind(context.to_def_id());
+        debug_assert_ne!(kind, DefKind::ConstParam);
+
+        let ty::FnDef(did, substs) = *callee_ty.kind() else {
+            if require_const {
+                let context = kind.descr(context.to_def_id());
+                tcx.sess.span_err(span, format!("cannot call non-const fn `{callee_ty}` in {context}s"));
+            }
+            trace!("not a function item");
+            return;
+        };
+        trace!(?substs);
     }
 
     /// Attempts to reinterpret `method(rcvr, args...)` as `rcvr.method(args...)`
