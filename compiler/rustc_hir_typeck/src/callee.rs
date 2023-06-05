@@ -6,9 +6,9 @@ use crate::type_error_struct;
 use rustc_ast::util::parser::PREC_POSTFIX;
 use rustc_errors::{struct_span_err, Applicability, Diagnostic, ErrorGuaranteed, StashKey};
 use rustc_hir as hir;
-use rustc_hir::HirId;
 use rustc_hir::def::{self, CtorKind, DefKind, Namespace, Res};
 use rustc_hir::def_id::DefId;
+use rustc_hir::HirId;
 use rustc_hir_analysis::autoderef::Autoderef;
 use rustc_infer::{
     infer,
@@ -485,7 +485,12 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
     /// Enforce that the type we are calling also allows turning off the `host` effect if the caller
     /// allows it too.
-    pub(super) fn enforce_context_effects(&self, call_expr_hir: HirId, span: Span, callee_ty: Ty<'tcx>) {
+    pub(super) fn enforce_context_effects(
+        &self,
+        call_expr_hir: HirId,
+        span: Span,
+        callee_ty: Ty<'tcx>,
+    ) {
         let tcx = self.tcx;
         if tcx.sess.opts.unstable_opts.unleash_the_miri_inside_of_you {
             return;

@@ -318,6 +318,17 @@ impl fmt::Display for BoundConstness {
     }
 }
 
+/// Represents const context for a particular definition.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, HashStable, TyEncodable, TyDecodable)]
+pub enum ConstContext {
+    /// normal `fn`s, non-const closures, etc.
+    Never,
+    /// `const fn`, `const || {}`
+    Maybe,
+    /// `const _: () = {}`, `const {}`
+    Always,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Copy, Hash, TyEncodable, TyDecodable, HashStable)]
 #[derive(TypeFoldable, TypeVisitable)]
 pub struct ClosureSizeProfileData<'tcx> {
@@ -2722,6 +2733,18 @@ impl<'tcx> TyCtxt<'tcx> {
                 false
             }
         })
+    }
+
+    pub fn const_context(self, def_id: DefId) -> ConstContext {
+        match self.def_kind(def_id) {
+            DefKind::Const
+            | DefKind::ConstParam
+            | DefKind::AssocConst
+            | DefKind::AnonConst
+            | DefKind::InlineConst => ConstContext::Always,
+            _ if self.constness(def_id) == hir::Constness::Const => ConstContext::Maybe,
+            _ => ConstContext::Never,
+        }
     }
 }
 
