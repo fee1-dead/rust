@@ -501,6 +501,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
         // Compute the constness required by the context.
         let context = tcx.hir().enclosing_body_owner(call_expr_hir);
+        let const_context = tcx.const_context(context.to_def_id());
         if tcx.has_attr(context.to_def_id(), sym::rustc_do_not_const_check) {
             trace!("do not const check this context");
             return;
@@ -509,13 +510,15 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         debug_assert_ne!(kind, DefKind::ConstParam);
 
         let ty::FnDef(did, substs) = *callee_ty.kind() else {
-            if require_const {
+            if const_context == ty::ConstContext::Always {
+                // FIXME allow closures as well
                 let context = kind.descr(context.to_def_id());
                 tcx.sess.span_err(span, format!("cannot call non-const fn `{callee_ty}` in {context}s"));
             }
             trace!("not a function item");
             return;
         };
+
         trace!(?substs);
     }
 
