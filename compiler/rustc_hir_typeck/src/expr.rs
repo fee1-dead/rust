@@ -1273,7 +1273,12 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             Ok(method) => {
                 // We could add a "consider `foo::<params>`" suggestion here, but I wasn't able to
                 // trigger this codepath causing `structurally_resolved_type` to emit an error.
-                self.enforce_context_effects_inner(expr.hir_id, expr.span, method.def_id, method.substs);
+                self.enforce_context_effects_inner(
+                    expr.hir_id,
+                    expr.span,
+                    method.def_id,
+                    method.substs,
+                );
 
                 self.write_method_call(expr.hir_id, method);
                 Ok(method)
