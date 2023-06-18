@@ -261,6 +261,8 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
         _ => (None, Defaults::FutureCompatDisallowed),
     };
 
+    has_host_effect = has_host_effect && tcx.effects();
+
     let has_self = opt_self.is_some();
     let mut parent_has_self = false;
     let mut own_start = has_self as u32;

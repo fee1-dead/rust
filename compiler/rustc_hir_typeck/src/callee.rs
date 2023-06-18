@@ -495,7 +495,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
     ) {
         let tcx = self.tcx;
 
-        if tcx.sess.opts.unstable_opts.unleash_the_miri_inside_of_you {
+        if !tcx.effects() || tcx.sess.opts.unstable_opts.unleash_the_miri_inside_of_you {
             return;
         }
 

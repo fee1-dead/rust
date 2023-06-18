@@ -809,6 +809,18 @@ impl<'tcx> TyCtxt<'tcx> {
         self.features_query(())
     }
 
+    // TODO enable effects unconditionally when done
+    #[inline(always)]
+    pub fn effects(self) -> bool {
+        self.features().effects
+            || (cfg!(debug_assertions) && std::env::var_os("RUSTC_ENABLE_EFFECTS").is_some())
+    }
+
+    /// A helper while effects are not enabled unconditionally.
+    pub fn host_effect(self) -> Option<ty::GenericArg<'tcx>> {
+        self.effects().then_some(self.consts.true_.into())
+    }
+
     pub fn def_key(self, id: impl IntoQueryParam<DefId>) -> rustc_hir::definitions::DefKey {
         let id = id.into_query_param();
         // Accessing the DefKey is ok, since it is part of DefPathHash.

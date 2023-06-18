@@ -656,6 +656,7 @@ symbols! {
         dyn_trait,
         e,
         edition_panic,
+        effects,
         eh_catch_typeinfo,
         eh_personality,
         emit,
