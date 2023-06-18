@@ -397,6 +397,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
         host_param.opt_local_def_id_to_hir_id(None);
         host_param.opt_def_kind(Some(DefKind::ConstParam));
         host_param.type_of(EarlyBinder::bind(tcx.types.bool));
+        host_param.def_ident_span(None);
         params.push(ty::GenericParamDef {
             index: next_index(),
             name: sym::host,

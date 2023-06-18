@@ -10,6 +10,7 @@ use rustc_hir::def::{self, CtorKind, DefKind, Namespace, Res};
 use rustc_hir::def_id::DefId;
 use rustc_hir::HirId;
 use rustc_hir_analysis::autoderef::Autoderef;
+use rustc_infer::infer::InferOk;
 use rustc_infer::{
     infer,
     traits::{self, Obligation},
@@ -21,8 +22,8 @@ use rustc_infer::{
 use rustc_middle::ty::adjustment::{
     Adjust, Adjustment, AllowTwoPhase, AutoBorrow, AutoBorrowMutability,
 };
-use rustc_middle::ty::SubstsRef;
 use rustc_middle::ty::{self, Ty, TyCtxt, TypeVisitableExt};
+use rustc_middle::ty::{ConstContext, GenericParamDefKind, InternalSubsts, SubstsRef};
 use rustc_span::def_id::LocalDefId;
 use rustc_span::symbol::{sym, Ident};
 use rustc_span::Span;
@@ -376,6 +377,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         arg_exprs: &'tcx [hir::Expr<'tcx>],
         expected: Expectation<'tcx>,
     ) -> Ty<'tcx> {
+        self.enforce_context_effects(call_expr.hir_id, call_expr.span, callee_ty);
+
         let (fn_sig, def_id) = match *callee_ty.kind() {
             ty::FnDef(def_id, subst) => {
                 let fn_sig = self.tcx.fn_sig(def_id).subst(self.tcx, subst);
@@ -483,8 +486,62 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         fn_sig.output()
     }
 
+    pub(super) fn enforce_context_effects_inner(
+        &self,
+        call_expr_hir: HirId,
+        span: Span,
+        callee_did: DefId,
+        callee_substs: SubstsRef<'tcx>,
+    ) {
+        let tcx = self.tcx;
+
+        if tcx.sess.opts.unstable_opts.unleash_the_miri_inside_of_you {
+            return;
+        }
+
+        // Compute the constness required by the context.
+        let context = tcx.hir().enclosing_body_owner(call_expr_hir);
+        let const_context = tcx.const_context(context.to_def_id());
+
+        if tcx.has_attr(context.to_def_id(), sym::rustc_do_not_const_check) {
+            trace!("do not const check this context");
+            return;
+        }
+
+        let effect = match const_context {
+            ConstContext::Always => tcx.consts.false_,
+            ConstContext::Maybe => {
+                let substs = InternalSubsts::identity_for_item(tcx, context);
+                substs.host_effect_param().expect("ConstContext::Maybe must have host effect param")
+            }
+            ConstContext::Never => tcx.consts.true_,
+        };
+
+        let generics = tcx.generics_of(callee_did);
+
+        trace!(?generics, ?callee_substs);
+
+        let host_effect_param_index = generics.params.iter().position(|x| {
+            matches!(x.kind, GenericParamDefKind::Const { .. }) && x.name == sym::host
+        });
+
+        if let Some(idx) = host_effect_param_index {
+            let param = callee_substs.const_at(idx);
+            let cause = self.misc(span);
+            match self.at(&cause, self.param_env).eq(infer::DefineOpaqueTypes::No, effect, param) {
+                Ok(InferOk { obligations, value: () }) => {
+                    self.register_predicates(obligations);
+                }
+                Err(e) => {
+                    self.err_ctxt().report_mismatched_consts(&cause, effect, param, e).emit();
+                }
+            }
+        }
+    }
+
     /// Enforce that the type we are calling also allows turning off the `host` effect if the caller
     /// allows it too.
+    #[tracing::instrument(skip(self))]
     pub(super) fn enforce_context_effects(
         &self,
         call_expr_hir: HirId,
@@ -492,9 +549,6 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         callee_ty: Ty<'tcx>,
     ) {
         let tcx = self.tcx;
-        if tcx.sess.opts.unstable_opts.unleash_the_miri_inside_of_you {
-            return;
-        }
         if callee_ty.references_error() {
             return;
         }
@@ -502,13 +556,8 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
         // Compute the constness required by the context.
         let context = tcx.hir().enclosing_body_owner(call_expr_hir);
         let const_context = tcx.const_context(context.to_def_id());
-        if tcx.has_attr(context.to_def_id(), sym::rustc_do_not_const_check) {
-            trace!("do not const check this context");
-            return;
-        }
         let kind = tcx.def_kind(context.to_def_id());
         debug_assert_ne!(kind, DefKind::ConstParam);
-
         let ty::FnDef(did, substs) = *callee_ty.kind() else {
             if const_context == ty::ConstContext::Always {
                 // FIXME allow closures as well
@@ -519,7 +568,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
             return;
         };
 
-        trace!(?substs);
+        self.enforce_context_effects_inner(call_expr_hir, span, did, substs)
     }
 
     /// Attempts to reinterpret `method(rcvr, args...)` as `rcvr.method(args...)`
