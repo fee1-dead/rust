@@ -1,6 +1,6 @@
 // known-bug: #110395
 
-#![feature(const_trait_impl)]
+#![feature(const_trait_impl, effects)]
 
 #[const_trait]
 trait Convert<T> {
