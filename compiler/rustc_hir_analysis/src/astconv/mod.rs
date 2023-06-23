@@ -295,7 +295,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             item_segment.args(),
             item_segment.infer_args,
             None,
-            ty::BoundConstness::NotConst,
+            None,
         );
         if let Some(b) = item_segment.args().bindings.first() {
             prohibit_assoc_ty_binding(self.tcx(), b.span, Some((item_segment, span)));
@@ -345,7 +345,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
         generic_args: &'a hir::GenericArgs<'_>,
         infer_args: bool,
         self_ty: Option<Ty<'tcx>>,
-        constness: ty::BoundConstness,
+        host_effect: Option<ty::Const<'tcx>>,
     ) -> (SubstsRef<'tcx>, GenericArgCountResult) {
         // If the type is parameterized by this region, then replace this
         // region with the current anon region binding (in other words,
@@ -395,6 +395,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             span: Span,
             inferred_params: Vec<Span>,
             infer_args: bool,
+            host: Option<ty::Const<'tcx>>,
         }
 
         impl<'a, 'tcx> CreateSubstsForGenericArgsCtxt<'a, 'tcx> for SubstsForAstPathCtxt<'a, 'tcx> {
@@ -521,6 +522,11 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                         if let Err(guar) = ty.error_reported() {
                             return tcx.const_error(ty, guar).into();
                         }
+                        if ty == tcx.types.bool && param.name == sym::host {
+                            if let Some(host) = self.host {
+                                return host.into();
+                            }
+                        }
                         if !infer_args && has_default {
                             tcx.const_param_default(param.def_id).subst(tcx, substs.unwrap()).into()
                         } else {
@@ -543,6 +549,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             generic_args,
             inferred_params: vec![],
             infer_args,
+            host: host_effect,
         };
         let substs = create_substs_for_generic_args(
             tcx,
@@ -554,10 +561,8 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             &mut substs_ctx,
         );
 
-        if let ty::BoundConstness::ConstIfConst = constness
-            && generics.has_self && !tcx.has_attr(def_id, sym::const_trait)
-        {
-            tcx.sess.emit_err(crate::errors::ConstBoundForNonConstTrait { span } );
+        if host_effect.is_some() && generics.has_self && !tcx.has_attr(def_id, sym::const_trait) {
+            tcx.sess.emit_err(crate::errors::ConstBoundForNonConstTrait { span });
         }
 
         (substs, arg_count)
@@ -626,7 +631,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             item_segment.args(),
             item_segment.infer_args,
             None,
-            ty::BoundConstness::NotConst,
+            None,
         );
 
         if let Some(b) = item_segment.args().bindings.first() {
@@ -646,7 +651,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
         &self,
         trait_ref: &hir::TraitRef<'_>,
         self_ty: Ty<'tcx>,
-        constness: ty::BoundConstness,
+        host_effect_param: Option<ty::Const<'tcx>>,
     ) -> ty::TraitRef<'tcx> {
         self.prohibit_generics(trait_ref.path.segments.split_last().unwrap().1.iter(), |_| {});
 
@@ -656,7 +661,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             self_ty,
             trait_ref.path.segments.last().unwrap(),
             true,
-            constness,
+            host_effect_param,
         )
     }
 
@@ -685,7 +690,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             args,
             infer_args,
             Some(self_ty),
-            constness,
+            None,
         );
 
         let tcx = self.tcx();
@@ -834,7 +839,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
         self_ty: Ty<'tcx>,
         trait_segment: &hir::PathSegment<'_>,
         is_impl: bool,
-        constness: ty::BoundConstness,
+        host_effect_param: Option<ty::Const<'tcx>>,
     ) -> ty::TraitRef<'tcx> {
         let (substs, _) = self.create_substs_for_ast_trait_ref(
             span,
@@ -842,7 +847,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             self_ty,
             trait_segment,
             is_impl,
-            constness,
+            host_effect_param,
         );
         if let Some(b) = trait_segment.args().bindings.first() {
             prohibit_assoc_ty_binding(self.tcx(), b.span, Some((trait_segment, span)));
@@ -858,7 +863,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
         self_ty: Ty<'tcx>,
         trait_segment: &'a hir::PathSegment<'a>,
         is_impl: bool,
-        constness: ty::BoundConstness,
+        host_effect_param: Option<ty::Const<'tcx>>,
     ) -> (SubstsRef<'tcx>, GenericArgCountResult) {
         self.complain_about_internal_fn_trait(span, trait_def_id, trait_segment, is_impl);
 
@@ -870,7 +875,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             trait_segment.args(),
             trait_segment.infer_args,
             Some(self_ty),
-            constness,
+            host_effect_param,
         )
     }
 
@@ -2221,7 +2226,8 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             self_ty,
             trait_segment,
             false,
-            constness,
+            // TODO
+            None,
         );
 
         let item_substs = self.create_substs_for_associated_item(
@@ -2823,7 +2829,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                     &GenericArgs::none(),
                     true,
                     None,
-                    ty::BoundConstness::NotConst,
+                    None,
                 );
                 tcx.at(span).type_of(def_id).subst(tcx, substs)
             }
@@ -3047,7 +3053,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
         let trait_ref = self.instantiate_mono_trait_ref(
             i.of_trait.as_ref()?,
             self.ast_ty_to_ty(i.self_ty),
-            ty::BoundConstness::NotConst,
+            None,
         );
 
         let assoc = tcx.associated_items(trait_ref.def_id).find_by_name_and_kind(

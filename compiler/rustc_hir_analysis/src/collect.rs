@@ -30,7 +30,9 @@ use rustc_infer::traits::ObligationCause;
 use rustc_middle::hir::nested_filter;
 use rustc_middle::query::Providers;
 use rustc_middle::ty::util::{Discr, IntTypeExt};
-use rustc_middle::ty::{self, AdtKind, Const, IsSuggestable, ToPredicate, Ty, TyCtxt};
+use rustc_middle::ty::{
+    self, AdtKind, Const, InternalSubsts, IsSuggestable, ToPredicate, Ty, TyCtxt,
+};
 use rustc_span::symbol::{kw, sym, Ident, Symbol};
 use rustc_span::Span;
 use rustc_target::spec::abi;
@@ -1360,7 +1362,14 @@ fn impl_trait_ref(
             icx.astconv().instantiate_mono_trait_ref(
                 ast_trait_ref,
                 selfty,
-                check_impl_constness(tcx, impl_.constness, ast_trait_ref),
+                if check_impl_constness(tcx, impl_.constness, ast_trait_ref)
+                    == ty::BoundConstness::ConstIfConst
+                {
+                    // TODO assert this is Some
+                    InternalSubsts::identity_for_item(tcx, def_id).host_effect_param()
+                } else {
+                    None
+                },
             )
         })
         .map(ty::EarlyBinder::bind)
