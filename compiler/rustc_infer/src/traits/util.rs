@@ -253,10 +253,6 @@ impl<'tcx, O: Elaboratable<'tcx>> Elaborator<'tcx, O> {
 
                 let obligations =
                     predicates.predicates.iter().enumerate().map(|(index, &(mut pred, span))| {
-                        // when parent predicate is non-const, elaborate it to non-const predicates.
-                        if data.constness == ty::BoundConstness::NotConst {
-                            pred = pred.without_const(tcx);
-                        }
                         elaboratable.child_with_derived_cause(
                             pred.subst_supertrait(tcx, &bound_predicate.rebind(data.trait_ref))
                                 .as_predicate(),

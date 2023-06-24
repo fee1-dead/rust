@@ -61,7 +61,11 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
             ParamCandidate(param) => {
                 let obligations =
                     self.confirm_param_candidate(obligation, param.map_bound(|t| t.trait_ref));
-                ImplSource::Param(obligations, param.skip_binder().constness)
+                // TODO
+                ImplSource::Param(
+                    obligations,
+                    ty::BoundConstness::NotConst, /*param.skip_binder().constness*/
+                )
             }
 
             ImplCandidate(impl_def_id) => {
@@ -137,13 +141,14 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
             subobligation.set_depth_from_parent(obligation.recursion_depth);
         }
 
-        if !obligation.predicate.is_const_if_const() {
+        // TODO
+        /*if !obligation.predicate.is_const_if_const() {
             // normalize nested predicates according to parent predicate's constness.
             impl_src = impl_src.map(|mut o| {
                 o.predicate = o.predicate.without_const(self.tcx());
                 o
             });
-        }
+        }*/
 
         Ok(impl_src)
     }
@@ -692,11 +697,15 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
         let mut nested = self.confirm_poly_trait_refs(obligation, trait_ref)?;
         let cause = obligation.derived_cause(BuiltinDerivedObligation);
 
-        if obligation.is_const() && !is_const {
+        // TODO
+        if false
+        /*obligation.is_const() && !is_const*/
+        {
             // function is a trait method
             if let ty::FnDef(def_id, substs) = self_ty.kind() && let Some(trait_id) = tcx.trait_of_item(*def_id) {
                 let trait_ref = TraitRef::from_method(tcx, trait_id, *substs);
-                let poly_trait_pred = Binder::dummy(trait_ref).with_constness(ty::BoundConstness::ConstIfConst);
+                // TODO
+                let poly_trait_pred = Binder::dummy(trait_ref);
                 let obligation = Obligation::new(tcx, cause.clone(), obligation.param_env, poly_trait_pred);
                 nested.push(obligation);
             }
@@ -1227,9 +1236,10 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
         impl_def_id: Option<DefId>,
     ) -> Result<Vec<PredicateObligation<'tcx>>, SelectionError<'tcx>> {
         // `~const Destruct` in a non-const environment is always trivially true, since our type is `Drop`
-        if !obligation.is_const() {
+        // TODO
+        /*if !obligation.is_const() {
             return Ok(vec![]);
-        }
+        }*/
 
         let drop_trait = self.tcx().require_lang_item(LangItem::Drop, None);
 
@@ -1341,7 +1351,8 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                                 cause.span,
                                 [nested_ty],
                             ),
-                            constness: ty::BoundConstness::ConstIfConst,
+                            // TODO
+                            // constness: ty::BoundConstness::ConstIfConst,
                             polarity: ty::ImplPolarity::Positive,
                         }),
                         &mut nested,
@@ -1367,7 +1378,8 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                             cause.span,
                             [nested_ty],
                         ),
-                        constness: ty::BoundConstness::ConstIfConst,
+                        // TODO
+                        //constness: ty::BoundConstness::ConstIfConst,
                         polarity: ty::ImplPolarity::Positive,
                     });
 

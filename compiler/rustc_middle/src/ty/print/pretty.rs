@@ -2784,9 +2784,10 @@ define_print_and_forward_display! {
     }
 
     TraitPredPrintModifiersAndPath<'tcx> {
-        if let ty::BoundConstness::ConstIfConst = self.0.constness {
+        // TODO
+        /*if let ty::BoundConstness::ConstIfConst = self.0.constness {
             p!("~const ")
-        }
+        }*/
 
         if let ty::ImplPolarity::Negative = self.0.polarity {
             p!("!")
@@ -2821,9 +2822,10 @@ define_print_and_forward_display! {
 
     ty::TraitPredicate<'tcx> {
         p!(print(self.trait_ref.self_ty()), ": ");
-        if let ty::BoundConstness::ConstIfConst = self.constness && cx.tcx().features().const_trait_impl {
+        // TODO
+        /*if let ty::BoundConstness::ConstIfConst = self.constness && cx.tcx().features().const_trait_impl {
             p!("~const ");
-        }
+        }*/
         if let ty::ImplPolarity::Negative = self.polarity {
             p!("!");
         }

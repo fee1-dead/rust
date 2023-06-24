@@ -514,9 +514,10 @@ pub(crate) fn to_pretty_impl_header(tcx: TyCtxt<'_>, impl_def_id: DefId) -> Opti
                 continue;
             }
 
-            if ty::BoundConstness::ConstIfConst == poly_trait_ref.skip_binder().constness {
+            // TODO
+            /*if ty::BoundConstness::ConstIfConst == poly_trait_ref.skip_binder().constness {
                 p = p.without_const(tcx);
-            }
+            }*/
         }
         pretty_predicates.push(p.to_string());
     }

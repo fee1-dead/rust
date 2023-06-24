@@ -1875,7 +1875,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                 ));
                 remap_cause.insert((
                     before_span,
-                    error.obligation.predicate.without_const(self.tcx),
+                    error.obligation.predicate,
                     error.obligation.cause.clone(),
                 ));
             } else {

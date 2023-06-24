@@ -375,7 +375,7 @@ impl<'tcx> InferCtxtExt<'tcx> for InferCtxt<'tcx> {
                     self.tcx,
                     ObligationCause::dummy(),
                     param_env,
-                    ty.rebind(ty::TraitPredicate { trait_ref, constness, polarity }),
+                    ty.rebind(ty::TraitPredicate { trait_ref, polarity }),
                 );
                 let ocx = ObligationCtxt::new_in_snapshot(self);
                 ocx.register_obligation(obligation);
@@ -682,9 +682,10 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                         let trait_predicate = bound_predicate.rebind(trait_predicate);
                         let mut trait_predicate = self.resolve_vars_if_possible(trait_predicate);
 
-                        trait_predicate.remap_constness_diag(obligation.param_env);
-                        let predicate_is_const = ty::BoundConstness::ConstIfConst
-                            == trait_predicate.skip_binder().constness;
+                        // TODO
+                        // trait_predicate.remap_constness_diag(obligation.param_env);
+                        let predicate_is_const = false /*ty::BoundConstness::ConstIfConst
+                            == trait_predicate.skip_binder().constness*/;
 
                         if self.tcx.sess.has_errors().is_some()
                             && trait_predicate.references_error()
@@ -1898,9 +1899,10 @@ impl<'tcx> InferCtxtPrivExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
             .all_impls(trait_pred.def_id())
             .filter_map(|def_id| {
                 if self.tcx.impl_polarity(def_id) == ty::ImplPolarity::Negative
-                    || !trait_pred
+                    // TODO
+                    /*|| !trait_pred
                         .skip_binder()
-                        .is_constness_satisfied_by(self.tcx.constness(def_id))
+                        .is_constness_satisfied_by(self.tcx.constness(def_id))*/
                     || !self.tcx.is_user_visible_dep(def_id.krate)
                 {
                     return None;
@@ -2989,7 +2991,8 @@ impl<'tcx> InferCtxtPrivExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
             && let Ok((implemented_kind, params)) = self.type_implements_fn_trait(
             obligation.param_env,
             trait_ref.self_ty(),
-            trait_predicate.skip_binder().constness,
+            // TODO
+            ty::BoundConstness::NotConst/* trait_predicate.skip_binder().constness */,
             trait_predicate.skip_binder().polarity,
         )
         {
@@ -3098,7 +3101,8 @@ impl<'tcx> InferCtxtPrivExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
         span: Span,
     ) -> UnsatisfiedConst {
         let mut unsatisfied_const = UnsatisfiedConst(false);
-        if trait_predicate.is_const_if_const() && obligation.param_env.is_const() {
+        // TODO
+        /*if trait_predicate.is_const_if_const() && obligation.param_env.is_const() {
             let non_const_predicate = trait_ref.without_const();
             let non_const_obligation = Obligation {
                 cause: obligation.cause.clone(),
@@ -3118,7 +3122,7 @@ impl<'tcx> InferCtxtPrivExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                     ),
                 );
             }
-        }
+        }*/
         unsatisfied_const
     }
 

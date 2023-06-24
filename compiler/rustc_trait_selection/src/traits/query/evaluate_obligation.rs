@@ -66,17 +66,18 @@ impl<'tcx> InferCtxtExt<'tcx> for InferCtxt<'tcx> {
     ) -> Result<EvaluationResult, OverflowError> {
         let mut _orig_values = OriginalQueryValues::default();
 
-        let param_env = match obligation.predicate.kind().skip_binder() {
-            ty::PredicateKind::Clause(ty::ClauseKind::Trait(pred)) => {
-                // we ignore the value set to it.
-                let mut _constness = pred.constness;
-                obligation
-                    .param_env
-                    .with_constness(_constness.and(obligation.param_env.constness()))
-            }
-            // constness has no effect on the given predicate.
-            _ => obligation.param_env.without_const(),
-        };
+        // TODO
+        let param_env = obligation.param_env; /*match obligation.predicate.kind().skip_binder() {
+        ty::PredicateKind::Clause(ty::Clause::Trait(pred)) => {
+        // we ignore the value set to it.
+        let mut _constness = pred.constness;
+        obligation
+        .param_env
+        .with_constness(_constness.and(obligation.param_env.constness()))
+        }
+        // constness has no effect on the given predicate.
+        _ => obligation.param_env.without_const(),
+        };*/
 
         if self.next_trait_solver() {
             self.probe(|snapshot| {

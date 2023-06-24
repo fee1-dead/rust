@@ -842,10 +842,11 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
     ) {
         // If the predicate is `~const Destruct` in a non-const environment, we don't actually need
         // to check anything. We'll short-circuit checking any obligations in confirmation, too.
-        if !obligation.is_const() {
+        // TODO
+        /*if !obligation.is_const() {
             candidates.vec.push(ConstDestructCandidate(None));
             return;
-        }
+        }*/
 
         let self_ty = self.infcx.shallow_resolve(obligation.self_ty());
         match self_ty.skip_binder().kind() {
