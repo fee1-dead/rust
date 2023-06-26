@@ -1346,7 +1346,9 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
                         }
                     }
                     GenericParamDefKind::Const { has_default } => {
-                        if !infer_args && has_default {
+                        // TODO: check if this is always good to be infer var
+                        let is_host = param.name == sym::host;
+                        if !infer_args && has_default && !is_host {
                             tcx.const_param_default(param.def_id).subst(tcx, substs.unwrap()).into()
                         } else {
                             self.fcx.var_for_def(self.span, param)
