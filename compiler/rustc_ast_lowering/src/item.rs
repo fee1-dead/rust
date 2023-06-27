@@ -257,7 +257,7 @@ impl<'hir> LoweringContext<'_, 'hir> {
                     );
 
                     let itctx = ImplTraitContext::Universal;
-                    let (generics, decl) = this.lower_generics(generics, id, &itctx, |this| {
+                    let (generics, decl) = this.lower_generics(generics, id, &itctx, this.lower_constness(header.constness), |this| {
                         let ret_id = asyncness.opt_return_id();
                         this.lower_fn_decl(&decl, id, *fn_sig_span, FnDeclKind::Fn, ret_id)
                     });
@@ -1277,6 +1277,7 @@ impl<'hir> LoweringContext<'_, 'hir> {
         generics: &Generics,
         parent_node_id: NodeId,
         itctx: &ImplTraitContext,
+        constness: Const,
         f: impl FnOnce(&mut Self) -> T,
     ) -> (&'hir hir::Generics<'hir>, T) {
         debug_assert!(self.impl_trait_defs.is_empty());
@@ -1371,6 +1372,24 @@ impl<'hir> LoweringContext<'_, 'hir> {
 
         let impl_trait_bounds = std::mem::take(&mut self.impl_trait_bounds);
         predicates.extend(impl_trait_bounds.into_iter());
+
+        if let Const::Yes(span) = constness {
+            let def_id = self.local_def_id(parent_node_id);
+            let hir_id = self.next_id();
+            let param = hir::GenericParam {
+                def_id,
+                hir_id,
+                name: hir::ParamName::Plain(Ident { name: sym::host, span }),
+                span,
+                // TODO IDK
+                pure_wrt_drop: true,
+                kind: hir::GenericParamKind::Const { ty: self.arena.alloc(self.ty(span, hir::TyKind::Path(hir::QPath::Resolved(None, self.arena.alloc(hir::Path {
+                    res: Res::PrimTy(hir::PrimTy::Bool),
+                    span,
+                    segments: self.arena.alloc_from_iter([hir::PathSegment { ident: Ident { name: sym::bool, span }, hir_id: self.next_id(), res: Res::PrimTy(hir::PrimTy::Bool), args: None, infer_args: false }])
+                }))))), default: Some(hir::AnonConst {  }) }
+            };
+        }
 
         let lowered_generics = self.arena.alloc(hir::Generics {
             params: self.arena.alloc_from_iter(params),

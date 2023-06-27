@@ -1,13 +1,11 @@
 // check-pass
 
-// misc tests not directly related to const traits, but encountered
-// while implementing effects
-
 #![feature(const_trait_impl, effects)]
 
-// #[const_trait]
+#[const_trait]
 pub trait X<Rhs: ?Sized = Self> {}
 
+#[const_trait]
 pub trait Y: X {}
 
 impl X for () {}
