@@ -956,10 +956,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             match bound_pred.skip_binder() {
                 ty::ClauseKind::Trait(trait_pred) => {
                     assert_eq!(trait_pred.polarity, ty::ImplPolarity::Positive);
-                    trait_bounds.push((
-                        bound_pred.rebind(trait_pred.trait_ref),
-                        span,
-                    ));
+                    trait_bounds.push((bound_pred.rebind(trait_pred.trait_ref), span));
                 }
                 ty::ClauseKind::Projection(proj) => {
                     projection_bounds.push((bound_pred.rebind(proj), span));
@@ -1054,7 +1051,6 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             .filter(|(trait_ref, _)| !tcx.trait_is_auto(trait_ref.def_id()));
 
         for (base_trait_ref, span) in regular_traits_refs_spans {
-            assert_eq!(constness, ty::BoundConstness::NotConst);
             let base_pred: ty::Predicate<'tcx> = base_trait_ref.to_predicate(tcx);
             for pred in traits::elaborate(tcx, [base_pred]) {
                 debug!("conv_object_ty_poly_trait_ref: observing object predicate `{:?}`", pred);

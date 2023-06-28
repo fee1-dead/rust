@@ -506,7 +506,6 @@ fn param_env_for_derived_eq(tcx: TyCtxt<'_>, did: DefId, eq_trait_id: DefId) -> 
         if let ClauseKind::Trait(p) = p.kind().skip_binder()
             && p.trait_ref.def_id == eq_trait_id
             && let ty::Param(self_ty) = p.trait_ref.self_ty().kind()
-            && p.constness == BoundConstness::NotConst
         {
             // Flag types which already have an `Eq` bound.
             params[self_ty.index as usize].1 = false;

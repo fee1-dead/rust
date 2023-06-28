@@ -622,10 +622,6 @@ impl<'tcx> Clause<'tcx> {
             None
         }
     }
-
-    pub fn without_const(self, tcx: TyCtxt<'tcx>) -> Clause<'tcx> {
-        self.as_predicate().without_const(tcx).expect_clause()
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Hash, TyEncodable, TyDecodable)]
