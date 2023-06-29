@@ -2,7 +2,7 @@
 // Checking the validity of traits' where clauses happen at a later stage.
 // (`rustc_const_eval` instead of `rustc_hir_analysis`) Therefore one file as a
 // test is not enough.
-#![feature(const_trait_impl)]
+#![feature(const_trait_impl, effects)]
 
 #[const_trait]
 trait Bar {}

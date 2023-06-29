@@ -680,11 +680,11 @@ impl<'tcx> TypeErrCtxtExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                 match bound_predicate.skip_binder() {
                     ty::PredicateKind::Clause(ty::ClauseKind::Trait(trait_predicate)) => {
                         let trait_predicate = bound_predicate.rebind(trait_predicate);
-                        let mut trait_predicate = self.resolve_vars_if_possible(trait_predicate);
+                        let trait_predicate = self.resolve_vars_if_possible(trait_predicate);
 
                         // TODO
                         // trait_predicate.remap_constness_diag(obligation.param_env);
-                        let predicate_is_const = false /*ty::BoundConstness::ConstIfConst
+                        let predicate_is_const = trait_predicate.skip_binder().trait_ref.substs.host_effect_param().is_some()/*ty::BoundConstness::ConstIfConst
                             == trait_predicate.skip_binder().constness*/;
 
                         if self.tcx.sess.has_errors().is_some()

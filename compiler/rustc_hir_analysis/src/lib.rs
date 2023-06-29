@@ -525,7 +525,7 @@ pub fn hir_trait_to_predicates<'tcx>(
     let _ = &item_cx.astconv().instantiate_poly_trait_ref(
         hir_trait,
         DUMMY_SP,
-        ty::BoundConstness::NotConst,
+        None,
         ty::ImplPolarity::Positive,
         self_ty,
         &mut bounds,

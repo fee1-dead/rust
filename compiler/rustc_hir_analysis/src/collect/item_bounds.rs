@@ -26,7 +26,7 @@ fn associated_type_bounds<'tcx>(
     );
 
     let icx = ItemCtxt::new(tcx, assoc_item_def_id);
-    let mut bounds = icx.astconv().compute_bounds(item_ty, ast_bounds, OnlySelfBounds(false));
+    let mut bounds = icx.astconv().compute_bounds(item_ty, ast_bounds, OnlySelfBounds(false), None);
     // Associated types are implicitly sized unless a `?Sized` bound is found
     icx.astconv().add_implicitly_sized(&mut bounds, item_ty, ast_bounds, None, span);
 
@@ -68,7 +68,7 @@ fn opaque_type_bounds<'tcx>(
 ) -> &'tcx [(ty::Clause<'tcx>, Span)] {
     ty::print::with_no_queries!({
         let icx = ItemCtxt::new(tcx, opaque_def_id);
-        let mut bounds = icx.astconv().compute_bounds(item_ty, ast_bounds, OnlySelfBounds(false));
+        let mut bounds = icx.astconv().compute_bounds(item_ty, ast_bounds, OnlySelfBounds(false), None);
         // Opaque types are implicitly sized unless a `?Sized` bound is found
         icx.astconv().add_implicitly_sized(&mut bounds, item_ty, ast_bounds, None, span);
         debug!(?bounds);

@@ -103,19 +103,20 @@ impl<'tcx> dyn AstConv<'tcx> + '_ {
         bounds: &mut Bounds<'tcx>,
         bound_vars: &'tcx ty::List<ty::BoundVariableKind>,
         only_self_bounds: OnlySelfBounds,
+        host_param: Option<ty::Const<'tcx>>,
     ) {
         for ast_bound in ast_bounds {
             match ast_bound {
                 hir::GenericBound::Trait(poly_trait_ref, modifier) => {
                     let (constness, polarity) = match modifier {
                         hir::TraitBoundModifier::MaybeConst => {
-                            (ty::BoundConstness::ConstIfConst, ty::ImplPolarity::Positive)
+                            (Some(host_param.unwrap()), ty::ImplPolarity::Positive)
                         }
                         hir::TraitBoundModifier::None => {
-                            (ty::BoundConstness::NotConst, ty::ImplPolarity::Positive)
+                            (None, ty::ImplPolarity::Positive)
                         }
                         hir::TraitBoundModifier::Negative => {
-                            (ty::BoundConstness::NotConst, ty::ImplPolarity::Negative)
+                            (None, ty::ImplPolarity::Negative)
                         }
                         hir::TraitBoundModifier::Maybe => continue,
                     };
@@ -177,6 +178,7 @@ impl<'tcx> dyn AstConv<'tcx> + '_ {
         param_ty: Ty<'tcx>,
         ast_bounds: &[hir::GenericBound<'_>],
         only_self_bounds: OnlySelfBounds,
+        host_param: Option<ty::Const<'tcx>>,
     ) -> Bounds<'tcx> {
         let mut bounds = Bounds::default();
         self.add_bounds(
@@ -185,6 +187,7 @@ impl<'tcx> dyn AstConv<'tcx> + '_ {
             &mut bounds,
             ty::List::empty(),
             only_self_bounds,
+            host_param,
         );
         debug!(?bounds);
 
@@ -217,6 +220,7 @@ impl<'tcx> dyn AstConv<'tcx> + '_ {
             &mut bounds,
             ty::List::empty(),
             OnlySelfBounds(true),
+            None,
         );
         debug!(?bounds);
 
@@ -239,7 +243,7 @@ impl<'tcx> dyn AstConv<'tcx> + '_ {
         speculative: bool,
         dup_bindings: &mut FxHashMap<DefId, Span>,
         path_span: Span,
-        constness: ty::BoundConstness,
+        host: Option<ty::Const<'tcx>>,
         only_self_bounds: OnlySelfBounds,
         polarity: ty::ImplPolarity,
     ) -> Result<(), ErrorGuaranteed> {
@@ -574,6 +578,7 @@ impl<'tcx> dyn AstConv<'tcx> + '_ {
                         bounds,
                         projection_ty.bound_vars(),
                         only_self_bounds,
+                        host,
                     );
                 }
             }

@@ -120,6 +120,15 @@ fn gather_explicit_predicates_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Gen
     let parent_count = generics.parent_count as u32;
     let has_own_self = generics.has_self && parent_count == 0;
 
+    // mfw generics_of doesn't give you parent generics so you have to
+    // use identity substs instead
+    let host_effect = if tcx.effects() {
+        let substs = InternalSubsts::identity_for_item(tcx, def_id);
+        substs.consts().find(|x| matches!(x.kind(), ty::ConstKind::Param(ty::ParamConst { name: sym::host, .. })))
+    } else {
+        None
+    };
+
     // Below we'll consider the bounds on the type parameters (including `Self`)
     // and the explicit where-clauses, but to get the full set of predicates
     // on a trait we must also consider the bounds that follow the trait's name,
@@ -127,7 +136,7 @@ fn gather_explicit_predicates_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Gen
     if let Some(self_bounds) = is_trait {
         predicates.extend(
             icx.astconv()
-                .compute_bounds(tcx.types.self_param, self_bounds, OnlySelfBounds(false))
+                .compute_bounds(tcx.types.self_param, self_bounds, OnlySelfBounds(false), host_effect)
                 .clauses(),
         );
     }
@@ -234,6 +243,7 @@ fn gather_explicit_predicates_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Gen
                     &mut bounds,
                     bound_vars,
                     OnlySelfBounds(false),
+                    host_effect,
                 );
                 predicates.extend(bounds.clauses());
             }
@@ -606,7 +616,7 @@ pub(super) fn implied_predicates_with_filter(
     let (superbounds, where_bounds_that_match) = match filter {
         PredicateFilter::All => (
             // Convert the bounds that follow the colon (or equal in trait aliases)
-            icx.astconv().compute_bounds(self_param_ty, bounds, OnlySelfBounds(false)),
+            icx.astconv().compute_bounds(self_param_ty, bounds, OnlySelfBounds(false), None),
             // Also include all where clause bounds
             icx.type_parameter_bounds_in_generics(
                 generics,
@@ -618,7 +628,7 @@ pub(super) fn implied_predicates_with_filter(
         ),
         PredicateFilter::SelfOnly => (
             // Convert the bounds that follow the colon (or equal in trait aliases)
-            icx.astconv().compute_bounds(self_param_ty, bounds, OnlySelfBounds(true)),
+            icx.astconv().compute_bounds(self_param_ty, bounds, OnlySelfBounds(true), None),
             // Include where clause bounds for `Self`
             icx.type_parameter_bounds_in_generics(
                 generics,
@@ -797,6 +807,7 @@ impl<'tcx> ItemCtxt<'tcx> {
                 &mut bounds,
                 bound_vars,
                 only_self_bounds,
+                None,
             );
         }
 

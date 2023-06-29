@@ -670,7 +670,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
         hir_id: hir::HirId,
         span: Span,
         binding_span: Option<Span>,
-        constness: ty::BoundConstness,
+        host: Option<ty::Const<'tcx>>,
         polarity: ty::ImplPolarity,
         bounds: &mut Bounds<'tcx>,
         speculative: bool,
@@ -690,8 +690,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             args,
             infer_args,
             Some(self_ty),
-            // TODO hmm?
-            None,
+            host,
         );
 
         let tcx = self.tcx();
@@ -704,7 +703,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             ty::Binder::bind_with_vars(ty::TraitRef::new(tcx, trait_def_id, substs), bound_vars);
 
         debug!(?poly_trait_ref, ?assoc_bindings);
-        bounds.push_trait_bound(tcx, poly_trait_ref, span, constness, polarity);
+        bounds.push_trait_bound(tcx, poly_trait_ref, span, polarity);
 
         let mut dup_bindings = FxHashMap::default();
         for binding in &assoc_bindings {
@@ -727,7 +726,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
                 speculative,
                 &mut dup_bindings,
                 binding_span.unwrap_or(binding.span),
-                constness,
+                host,
                 only_self_bounds,
                 polarity,
             );
@@ -756,12 +755,12 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
     /// where `'a` is a bound region at depth 0. Similarly, the `poly_trait_ref` would be
     /// `Bar<'a>`. The returned poly-trait-ref will have this binder instantiated explicitly,
     /// however.
-    #[instrument(level = "debug", skip(self, span, constness, bounds, speculative))]
+    #[instrument(level = "debug", skip(self, span, host, bounds, speculative))]
     pub(crate) fn instantiate_poly_trait_ref(
         &self,
         trait_ref: &hir::TraitRef<'_>,
         span: Span,
-        constness: ty::BoundConstness,
+        host: Option<ty::Const<'tcx>>,
         polarity: ty::ImplPolarity,
         self_ty: Ty<'tcx>,
         bounds: &mut Bounds<'tcx>,
@@ -783,7 +782,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             hir_id,
             span,
             binding_span,
-            constness,
+            host,
             polarity,
             bounds,
             speculative,
@@ -808,7 +807,6 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
         only_self_bounds: OnlySelfBounds,
     ) {
         let binding_span = Some(span);
-        let constness = ty::BoundConstness::NotConst;
         let speculative = false;
         let trait_ref_span = span;
         let trait_def_id = self.tcx().require_lang_item(lang_item, Some(span));
@@ -819,7 +817,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             hir_id,
             span,
             binding_span,
-            constness,
+            None,
             ty::ImplPolarity::Positive,
             bounds,
             speculative,
@@ -935,7 +933,7 @@ impl<'o, 'tcx> dyn AstConv<'tcx> + 'o {
             } = self.instantiate_poly_trait_ref(
                 &trait_bound.trait_ref,
                 trait_bound.span,
-                ty::BoundConstness::NotConst,
+                None,
                 ty::ImplPolarity::Positive,
                 dummy_self,
                 &mut bounds,

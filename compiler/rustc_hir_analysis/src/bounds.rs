@@ -42,8 +42,6 @@ impl<'tcx> Bounds<'tcx> {
         tcx: TyCtxt<'tcx>,
         trait_ref: ty::PolyTraitRef<'tcx>,
         span: Span,
-        // TODO
-        _constness: ty::BoundConstness,
         polarity: ty::ImplPolarity,
     ) {
         self.clauses.push((
