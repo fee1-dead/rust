@@ -23,7 +23,7 @@ use rustc_middle::ty::adjustment::{
     Adjust, Adjustment, AllowTwoPhase, AutoBorrow, AutoBorrowMutability,
 };
 use rustc_middle::ty::{self, ConstKind, GenericArgKind, Ty, TyCtxt, TypeVisitableExt};
-use rustc_middle::ty::{ConstContext, GenericParamDefKind, InternalSubsts, SubstsRef};
+use rustc_middle::ty::{ConstContext, InternalSubsts, SubstsRef};
 use rustc_span::def_id::LocalDefId;
 use rustc_span::symbol::{sym, Ident};
 use rustc_span::Span;
@@ -520,7 +520,7 @@ impl<'a, 'tcx> FnCtxt<'a, 'tcx> {
 
         let identity_substs = InternalSubsts::identity_for_item(tcx, callee_did);
 
-        trace!(?identity_substs, ?callee_substs);
+        trace!(?effect, ?identity_substs, ?callee_substs);
 
         let host_effect_param_index = identity_substs.iter().position(|x| {
             matches!(x.unpack(), GenericArgKind::Const(const_) if matches!(const_.kind(), ConstKind::Param(param) if param.name == sym::host))

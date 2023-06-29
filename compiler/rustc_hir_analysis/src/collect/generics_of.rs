@@ -219,9 +219,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
             }
         }
 
-        Node::Expr(expr) => {
-            (None, Defaults::FutureCompatDisallowed)
-        }
+        Node::Expr(expr) => (None, Defaults::FutureCompatDisallowed),
 
         Node::ImplItem(item) => {
             // GAT
@@ -254,9 +252,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
         generics.parent_count + generics.params.len()
     });
 
-    let mut params: Vec<_> = Vec::with_capacity(
-        ast_generics.params.len() + has_self as usize,
-    );
+    let mut params: Vec<_> = Vec::with_capacity(ast_generics.params.len() + has_self as usize);
 
     if let Some(opt_self) = opt_self {
         params.push(opt_self);
@@ -317,7 +313,7 @@ pub(super) fn generics_of(tcx: TyCtxt<'_>, def_id: LocalDefId) -> ty::Generics {
             })
         }
         GenericParamKind::Const { default, .. } => {
-            if !matches!(allow_defaults, Defaults::Allowed) && default.is_some() {
+            if !matches!(allow_defaults, Defaults::Allowed) && default.is_some() && !tcx.has_attr(param.def_id, sym::rustc_host) {
                 tcx.sess.span_err(
                     param.span,
                     "defaults for const parameters are only allowed in \

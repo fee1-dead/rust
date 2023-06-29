@@ -25,6 +25,7 @@ pub unsafe trait Copy {}
 
 #[lang = "fn_once"]
 #[rustc_paren_sugar]
+#[const_trait]
 pub trait FnOnce<Args: Tuple> {
     #[lang = "fn_once_output"]
     type Output;

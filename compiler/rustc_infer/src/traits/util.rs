@@ -252,7 +252,7 @@ impl<'tcx, O: Elaboratable<'tcx>> Elaborator<'tcx, O> {
                 };
 
                 let obligations =
-                    predicates.predicates.iter().enumerate().map(|(index, &(mut pred, span))| {
+                    predicates.predicates.iter().enumerate().map(|(index, &(pred, span))| {
                         elaboratable.child_with_derived_cause(
                             pred.subst_supertrait(tcx, &bound_predicate.rebind(data.trait_ref))
                                 .as_predicate(),

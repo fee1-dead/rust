@@ -1393,7 +1393,14 @@ impl<'hir> LoweringContext<'_, 'hir> {
         let impl_trait_bounds = std::mem::take(&mut self.impl_trait_bounds);
         predicates.extend(impl_trait_bounds.into_iter());
 
-        if let Const::Yes(span) = constness && self.tcx.effects() {
+        if let Const::Yes(span) = constness && self.tcx.effects()
+            // Do not add host param if it already has it (manually specified)
+            && !params.iter().any(|x| {
+                self.attrs.get(&x.hir_id.local_id).map_or(false, |attrs| {
+                    attrs.iter().any(|x| x.has_name(sym::rustc_host))
+                })
+            })
+        {
             let node_id = self.next_node_id();
             let def_id = self.create_def(self.local_def_id(parent_node_id), node_id, DefPathData::TypeNs(sym::host), span);
             let node_id = self.next_node_id();
@@ -1404,6 +1411,18 @@ impl<'hir> LoweringContext<'_, 'hir> {
             let bool_id = self.next_id();
             self.children.push((def_id, hir::MaybeOwner::NonOwner(hir_id)));
             self.children.push((anon_const, hir::MaybeOwner::NonOwner(const_id)));
+
+            let attr_id = self.tcx.sess.parse_sess.attr_id_generator.mk_attr_id();
+
+            let attrs = self.arena.alloc_from_iter([
+                Attribute {
+                    kind: AttrKind::Normal(P(NormalAttr::from_ident(Ident::new(sym::rustc_host, span)))),
+                    span,
+                    id: attr_id,
+                    style: AttrStyle::Outer,
+                },
+            ]);
+            self.attrs.insert(hir_id.local_id, attrs);
 
             let const_body = self.lower_body(|this| {
                 (
