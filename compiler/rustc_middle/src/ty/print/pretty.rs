@@ -17,6 +17,7 @@ use rustc_hir::LangItem;
 use rustc_session::config::TrimmedDefPaths;
 use rustc_session::cstore::{ExternCrate, ExternCrateSource};
 use rustc_session::Limit;
+use rustc_span::sym;
 use rustc_span::symbol::{kw, Ident, Symbol};
 use rustc_span::FileNameDisplayPreference;
 use rustc_target::abi::Size;
@@ -2017,11 +2018,20 @@ impl<'tcx> Printer<'tcx> for FmtPrinter<'_, 'tcx> {
     ) -> Result<Self::Path, Self::Error> {
         self = print_prefix(self)?;
 
-        if args.first().is_some() {
+        let tcx = self.tcx;
+        // skip host param as those are printed as `~const`
+        let mut args = args.iter().copied().filter(|arg| {
+            match arg.unpack() {
+                GenericArgKind::Const(c) if tcx.effects() && matches!(c.kind(), ty::ConstKind::Param(ty::ParamConst { name: sym::host, .. })) => false,
+                _ => true
+            }
+        }).peekable();
+
+        if args.peek().is_some() {
             if self.in_value {
                 write!(self, "::")?;
             }
-            self.generic_delimiters(|cx| cx.comma_sep(args.iter().cloned()))
+            self.generic_delimiters(|cx| cx.comma_sep(args))
         } else {
             Ok(self)
         }
@@ -2784,10 +2794,9 @@ define_print_and_forward_display! {
     }
 
     TraitPredPrintModifiersAndPath<'tcx> {
-        // TODO
-        /*if let ty::BoundConstness::ConstIfConst = self.0.constness {
+        if self.0.trait_ref.substs.host_effect_param().is_some() {
             p!("~const ")
-        }*/
+        }
 
         if let ty::ImplPolarity::Negative = self.0.polarity {
             p!("!")
@@ -2822,10 +2831,9 @@ define_print_and_forward_display! {
 
     ty::TraitPredicate<'tcx> {
         p!(print(self.trait_ref.self_ty()), ": ");
-        // TODO
-        /*if let ty::BoundConstness::ConstIfConst = self.constness && cx.tcx().features().const_trait_impl {
-            p!("~const ");
-        }*/
+        if self.trait_ref.substs.host_effect_param().is_some() {
+            p!("~const ")
+        }
         if let ty::ImplPolarity::Negative = self.polarity {
             p!("!");
         }

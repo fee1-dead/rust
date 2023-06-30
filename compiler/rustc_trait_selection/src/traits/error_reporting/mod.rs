@@ -3101,13 +3101,21 @@ impl<'tcx> InferCtxtPrivExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
         span: Span,
     ) -> UnsatisfiedConst {
         let mut unsatisfied_const = UnsatisfiedConst(false);
-        // TODO
-        /*if trait_predicate.is_const_if_const() && obligation.param_env.is_const() {
-            let non_const_predicate = trait_ref.without_const();
+        if trait_predicate.skip_binder().trait_ref.substs.host_effect_param().is_some() {
+            let unconst_pred = trait_predicate.map_bound(|mut x| {
+                x.trait_ref = ty::TraitRef::new(self.tcx, x.trait_ref.def_id, x.trait_ref.substs.iter().map(|arg| {
+                    match arg.unpack() {
+                        ty::GenericArgKind::Const(c) if matches!(c.kind(), ty::ConstKind::Param(ty::ParamConst { name: sym::host, .. })) => self.tcx.consts.true_.into(),
+                        _ => arg,
+                    }
+                }));
+                x
+            });
+
             let non_const_obligation = Obligation {
                 cause: obligation.cause.clone(),
                 param_env: obligation.param_env.without_const(),
-                predicate: non_const_predicate.to_predicate(self.tcx),
+                predicate: unconst_pred.to_predicate(self.tcx),
                 recursion_depth: obligation.recursion_depth,
             };
             if self.predicate_may_hold(&non_const_obligation) {
@@ -3117,12 +3125,12 @@ impl<'tcx> InferCtxtPrivExt<'tcx> for TypeErrCtxt<'_, 'tcx> {
                     format!(
                         "the trait `{}` is implemented for `{}`, \
                         but that implementation is not `const`",
-                        non_const_predicate.print_modifiers_and_trait_path(),
+                        unconst_pred.print_modifiers_and_trait_path(),
                         trait_ref.skip_binder().self_ty(),
                     ),
                 );
             }
-        }*/
+        }
         unsatisfied_const
     }
 
