@@ -146,7 +146,7 @@ pub enum SelectionCandidate<'tcx> {
     /// Implementation of a `Fn`-family trait by one of the anonymous
     /// types generated for a fn pointer type (e.g., `fn(int) -> int`)
     FnPointerCandidate {
-        is_const: bool,
+        host: Option<ty::Const<'tcx>>,
     },
 
     TraitAliasCandidate,

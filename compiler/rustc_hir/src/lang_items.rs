@@ -162,7 +162,8 @@ language_item_table! {
     FnPtrAddr,               sym::fn_ptr_addr,         fn_ptr_addr,                Target::Method(MethodKind::Trait { body: false }), GenericRequirement::None;
 
     Drop,                    sym::drop,                drop_trait,                 Target::Trait,          GenericRequirement::None;
-    Destruct,                sym::destruct,            destruct_trait,             Target::Trait,          GenericRequirement::None;
+    // TODO change to exact
+    Destruct,                sym::destruct,            destruct_trait,             Target::Trait,          GenericRequirement::Minimum(0);
 
     CoerceUnsized,           sym::coerce_unsized,      coerce_unsized_trait,       Target::Trait,          GenericRequirement::Minimum(1);
     DispatchFromDyn,         sym::dispatch_from_dyn,   dispatch_from_dyn_trait,    Target::Trait,          GenericRequirement::Minimum(1);
@@ -204,8 +205,8 @@ language_item_table! {
     DerefTarget,             sym::deref_target,        deref_target,               Target::AssocTy,        GenericRequirement::None;
     Receiver,                sym::receiver,            receiver_trait,             Target::Trait,          GenericRequirement::None;
 
-    Fn,                      kw::Fn,                   fn_trait,                   Target::Trait,          GenericRequirement::Exact(1);
     // TODO change minimum to exact
+    Fn,                      kw::Fn,                   fn_trait,                   Target::Trait,          GenericRequirement::Minimum(1);
     FnMut,                   sym::fn_mut,              fn_mut_trait,               Target::Trait,          GenericRequirement::Minimum(1);
     FnOnce,                  sym::fn_once,             fn_once_trait,              Target::Trait,          GenericRequirement::Minimum(1);
 
@@ -228,7 +229,8 @@ language_item_table! {
     // in the sense that a crate is not required to have it defined to use it, but a final product
     // is required to define it somewhere. Additionally, there are restrictions on crates that use
     // a weak lang item, but do not have it defined.
-    Panic,                   sym::panic,               panic_fn,                   Target::Fn,             GenericRequirement::Exact(0);
+    // TODO host has minimum??
+    Panic,                   sym::panic,               panic_fn,                   Target::Fn,             GenericRequirement::Minimum(0);
     PanicNounwind,           sym::panic_nounwind,      panic_nounwind,             Target::Fn,             GenericRequirement::Exact(0);
     PanicFmt,                sym::panic_fmt,           panic_fmt,                  Target::Fn,             GenericRequirement::None;
     PanicDisplay,            sym::panic_display,       panic_display,              Target::Fn,             GenericRequirement::None;

@@ -207,6 +207,7 @@
 #![feature(doc_cfg)]
 #![feature(doc_cfg_hide)]
 #![feature(doc_notable_trait)]
+#![cfg_attr(not(bootstrap), feature(effects))]
 #![feature(exhaustive_patterns)]
 #![feature(extern_types)]
 #![feature(fundamental)]

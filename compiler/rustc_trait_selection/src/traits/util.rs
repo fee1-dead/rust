@@ -264,6 +264,7 @@ pub fn closure_trait_ref_and_return_type<'tcx>(
     fn_trait_def_id: DefId,
     self_ty: Ty<'tcx>,
     sig: ty::PolyFnSig<'tcx>,
+    host: Option<ty::Const<'tcx>>,
     tuple_arguments: TupleArgumentsFlag,
 ) -> ty::Binder<'tcx, (ty::TraitRef<'tcx>, Ty<'tcx>)> {
     assert!(!self_ty.has_escaping_bound_vars());

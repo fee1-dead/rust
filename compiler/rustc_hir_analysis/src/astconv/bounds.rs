@@ -110,6 +110,7 @@ impl<'tcx> dyn AstConv<'tcx> + '_ {
                 hir::GenericBound::Trait(poly_trait_ref, modifier) => {
                     let (constness, polarity) = match modifier {
                         hir::TraitBoundModifier::MaybeConst => {
+                            // TODO what if downstream doesn't have the effect param? :(
                             (Some(host_param.unwrap()), ty::ImplPolarity::Positive)
                         }
                         hir::TraitBoundModifier::None => {

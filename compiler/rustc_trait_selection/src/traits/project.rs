@@ -2231,11 +2231,13 @@ fn confirm_callable_candidate<'cx, 'tcx>(
     let fn_once_def_id = tcx.require_lang_item(LangItem::FnOnce, None);
     let fn_once_output_def_id = tcx.require_lang_item(LangItem::FnOnceOutput, None);
 
+    // TODO check if host param is provided correctly
     let predicate = super::util::closure_trait_ref_and_return_type(
         tcx,
         fn_once_def_id,
         obligation.predicate.self_ty(),
         fn_sig,
+        None,
         flag,
     )
     .map_bound(|(trait_ref, ret_type)| ty::ProjectionPredicate {

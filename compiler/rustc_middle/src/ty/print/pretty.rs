@@ -2022,7 +2022,7 @@ impl<'tcx> Printer<'tcx> for FmtPrinter<'_, 'tcx> {
         // skip host param as those are printed as `~const`
         let mut args = args.iter().copied().filter(|arg| {
             match arg.unpack() {
-                GenericArgKind::Const(c) if tcx.effects() && matches!(c.kind(), ty::ConstKind::Param(ty::ParamConst { name: sym::host, .. })) => false,
+                GenericArgKind::Const(c) if tcx.effects() && matches!(c.kind(), ty::ConstKind::Param(ty::ParamConst { name: sym::host, .. })) => tcx.sess.verbose(),
                 _ => true
             }
         }).peekable();

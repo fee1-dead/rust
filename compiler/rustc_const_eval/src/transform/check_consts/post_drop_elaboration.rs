@@ -1,7 +1,8 @@
 use rustc_middle::mir::visit::Visitor;
 use rustc_middle::mir::{self, BasicBlock, Location};
-use rustc_middle::ty::{Ty, TyCtxt};
+use rustc_middle::ty::{self, Ty, TyCtxt};
 use rustc_span::{symbol::sym, Span};
+use rustc_hir as hir;
 
 use super::check::Qualifs;
 use super::ops::{self, NonConstOp};
@@ -34,7 +35,16 @@ pub fn check_live_drops<'tcx>(tcx: TyCtxt<'tcx>, body: &mir::Body<'tcx>) {
         return;
     }
 
-    let ccx = ConstCx { body, tcx, const_kind, param_env: tcx.param_env(def_id) };
+    // TODO please deduplicate this with the constructors ;(
+        let host = match const_kind {
+            Some(hir::ConstContext::Static(_) | hir::ConstContext::Const) => tcx.consts.false_,
+            Some(hir::ConstContext::ConstFn) => {
+                let substs = ty::InternalSubsts::identity_for_item(tcx, def_id);
+                substs.host_effect_param().expect("ConstContext::ConstFn must have host effect param")
+            }
+            None => tcx.consts.true_,
+        };
+    let ccx = ConstCx { body, tcx, const_kind, param_env: tcx.param_env(def_id), host };
     if !checking_enabled(&ccx) {
         return;
     }

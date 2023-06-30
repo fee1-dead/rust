@@ -26,6 +26,7 @@ pub struct ConstCx<'mir, 'tcx> {
     pub tcx: TyCtxt<'tcx>,
     pub param_env: ty::ParamEnv<'tcx>,
     pub const_kind: Option<hir::ConstContext>,
+    pub host: ty::Const<'tcx>,
 }
 
 impl<'mir, 'tcx> ConstCx<'mir, 'tcx> {
@@ -40,8 +41,17 @@ impl<'mir, 'tcx> ConstCx<'mir, 'tcx> {
         body: &'mir mir::Body<'tcx>,
         param_env: ty::ParamEnv<'tcx>,
     ) -> Self {
-        let const_kind = tcx.hir().body_const_context(body.source.def_id().expect_local());
-        ConstCx { body, tcx, param_env, const_kind }
+        let def_id = body.source.def_id().expect_local();
+        let const_kind = tcx.hir().body_const_context(def_id);
+        let host = match const_kind {
+            Some(hir::ConstContext::Static(_) | hir::ConstContext::Const) => tcx.consts.false_,
+            Some(hir::ConstContext::ConstFn) => {
+                let substs = ty::InternalSubsts::identity_for_item(tcx, def_id);
+                substs.host_effect_param().expect("ConstContext::ConstFn must have host effect param")
+            }
+            None => tcx.consts.true_,
+        };
+        ConstCx { body, tcx, param_env, const_kind, host }
     }
 
     pub fn def_id(&self) -> LocalDefId {

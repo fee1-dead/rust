@@ -2650,6 +2650,7 @@ impl<'tcx> TyCtxt<'tcx> {
         })
     }
 
+    // TODO maybe use the HIR thing?
     pub fn const_context(self, def_id: DefId) -> ConstContext {
         match self.def_kind(def_id) {
             DefKind::Const

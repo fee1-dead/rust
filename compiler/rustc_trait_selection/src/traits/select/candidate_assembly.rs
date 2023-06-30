@@ -313,17 +313,18 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
             // Provide an impl, but only for suitable `fn` pointers.
             ty::FnPtr(sig) => {
                 if sig.is_fn_trait_compatible() {
-                    candidates.vec.push(FnPointerCandidate { is_const: false });
+                    candidates.vec.push(FnPointerCandidate { host: None });
                 }
             }
             // Provide an impl for suitable functions, rejecting `#[target_feature]` functions (RFC 2396).
-            ty::FnDef(def_id, _) => {
+            ty::FnDef(def_id, substs) => {
                 if self.tcx().fn_sig(def_id).skip_binder().is_fn_trait_compatible()
                     && self.tcx().codegen_fn_attrs(def_id).target_features.is_empty()
                 {
+                    // TODO consider stability
                     candidates
                         .vec
-                        .push(FnPointerCandidate { is_const: self.tcx().is_const_fn(def_id) });
+                        .push(FnPointerCandidate { host: substs.consts().next_back() });
                 }
             }
             _ => {}

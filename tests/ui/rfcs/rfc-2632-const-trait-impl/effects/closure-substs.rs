@@ -7,6 +7,7 @@
     unboxed_closures,
 )]
 #![no_core]
+#![crate_type = "lib"]
 
 #[lang = "sized"]
 pub trait Sized {}
@@ -40,7 +41,7 @@ pub trait FnMut<Args: Tuple>: FnOnce<Args> {
     extern "rust-call" fn call_mut(&mut self, args: Args) -> Self::Output;
 }
 
-pub(crate) struct NeverShortCircuit<T>(pub T);
+pub struct NeverShortCircuit<T>(pub T);
 
 impl<T> NeverShortCircuit<T> {
     #[inline]
@@ -49,4 +50,12 @@ impl<T> NeverShortCircuit<T> {
     }
 }
 
-fn main() {}
+// test that using as a `~const FnOnce` correctly infers that host param needs to be inherited
+
+pub const fn owo() {
+    uwu(owo);
+}  
+
+pub const fn uwu<F: ~const FnOnce()>(x: F) {
+    x();
+}

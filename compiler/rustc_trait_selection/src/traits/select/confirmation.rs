@@ -102,8 +102,8 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                 ImplSource::Builtin(vtable_future)
             }
 
-            FnPointerCandidate { is_const } => {
-                let data = self.confirm_fn_pointer_candidate(obligation, is_const)?;
+            FnPointerCandidate { host } => {
+                let data = self.confirm_fn_pointer_candidate(obligation, host)?;
                 ImplSource::Builtin(data)
             }
 
@@ -667,7 +667,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
     fn confirm_fn_pointer_candidate(
         &mut self,
         obligation: &TraitObligation<'tcx>,
-        is_const: bool,
+        host: Option<ty::Const<'tcx>>,
     ) -> Result<Vec<PredicateObligation<'tcx>>, SelectionError<'tcx>> {
         debug!(?obligation, "confirm_fn_pointer_candidate");
 
@@ -690,6 +690,12 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
             obligation.predicate.def_id(),
             self_ty,
             sig,
+            Some(if let Some(host) = host {
+                // TODO idk what I am doing
+                host
+            } else {
+                tcx.consts.true_
+            }),
             util::TupleArgumentsFlag::Yes,
         )
         .map_bound(|(trait_ref, _)| trait_ref);
@@ -697,19 +703,7 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
         let mut nested = self.confirm_poly_trait_refs(obligation, trait_ref)?;
         let cause = obligation.derived_cause(BuiltinDerivedObligation);
 
-        // TODO
-        if false
-        /*obligation.is_const() && !is_const*/
-        {
-            // function is a trait method
-            if let ty::FnDef(def_id, substs) = self_ty.kind() && let Some(trait_id) = tcx.trait_of_item(*def_id) {
-                let trait_ref = TraitRef::from_method(tcx, trait_id, *substs);
-                // TODO
-                let poly_trait_pred = Binder::dummy(trait_ref);
-                let obligation = Obligation::new(tcx, cause.clone(), obligation.param_env, poly_trait_pred);
-                nested.push(obligation);
-            }
-        }
+        // TODO confirm that using `PartialEq::eq` as `~const Fn` requires `~const PartialEq`.
 
         // Confirm the `type Output: Sized;` bound that is present on `FnOnce`
         let output_ty = self.infcx.instantiate_binder_with_placeholders(sig.output());
@@ -1235,15 +1229,18 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
         obligation: &TraitObligation<'tcx>,
         impl_def_id: Option<DefId>,
     ) -> Result<Vec<PredicateObligation<'tcx>>, SelectionError<'tcx>> {
-        // `~const Destruct` in a non-const environment is always trivially true, since our type is `Drop`
-        // TODO
-        /*if !obligation.is_const() {
+        let tcx: TyCtxt<'_> = self.tcx();
+
+        let host_effect = obligation.predicate.skip_binder().trait_ref.substs.consts().next_back().unwrap();
+        
+        // `~const Destruct` in a non-const environment is always trivially true, since we currently
+        // don't have linear typing (all types can be dropped at runtime)
+        if host_effect == tcx.consts.true_ {
             return Ok(vec![]);
-        }*/
+        }
 
-        let drop_trait = self.tcx().require_lang_item(LangItem::Drop, None);
+        let drop_trait = tcx.require_lang_item(LangItem::Drop, None);
 
-        let tcx = self.tcx();
         let self_ty = self.infcx.shallow_resolve(obligation.self_ty());
 
         let mut nested = vec![];
@@ -1349,10 +1346,8 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                                 self.tcx(),
                                 LangItem::Destruct,
                                 cause.span,
-                                [nested_ty],
+                                [ty::GenericArg::from(nested_ty), host_effect.into()],
                             ),
-                            // TODO
-                            // constness: ty::BoundConstness::ConstIfConst,
                             polarity: ty::ImplPolarity::Positive,
                         }),
                         &mut nested,
@@ -1376,10 +1371,8 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                             self.tcx(),
                             LangItem::Destruct,
                             cause.span,
-                            [nested_ty],
+                            [ty::GenericArg::from(nested_ty), host_effect.into()],
                         ),
-                        // TODO
-                        //constness: ty::BoundConstness::ConstIfConst,
                         polarity: ty::ImplPolarity::Positive,
                     });
 

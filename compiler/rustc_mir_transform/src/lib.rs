@@ -246,7 +246,16 @@ fn mir_const_qualif(tcx: TyCtxt<'_>, def: LocalDefId) -> ConstQualifs {
         return Default::default();
     }
 
-    let ccx = check_consts::ConstCx { body, tcx, const_kind, param_env: tcx.param_env(def) };
+    // TODO please deduplicate this with the constructors ;(
+        let host = match const_kind {
+            Some(hir::ConstContext::Static(_) | hir::ConstContext::Const) => tcx.consts.false_,
+            Some(hir::ConstContext::ConstFn) => {
+                let substs = ty::InternalSubsts::identity_for_item(tcx, def);
+                substs.host_effect_param().expect("ConstContext::ConstFn must have host effect param")
+            }
+            None => tcx.consts.true_,
+        };
+    let ccx = check_consts::ConstCx { body, tcx, const_kind, param_env: tcx.param_env(def), host };
 
     let mut validator = check_consts::check::Checker::new(&ccx);
     validator.check_body();

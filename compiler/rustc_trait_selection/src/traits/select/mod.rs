@@ -1427,11 +1427,11 @@ impl<'cx, 'tcx> SelectionContext<'cx, 'tcx> {
                     | GeneratorCandidate
                     | FutureCandidate
                     // FnDef where the function is const
-                    | FnPointerCandidate { is_const: true }
+                    | FnPointerCandidate { host: Some(_) }
                     | ConstDestructCandidate(_)
                     | ClosureCandidate { is_const: true } => {}
 
-                    FnPointerCandidate { is_const: false } => {
+                    FnPointerCandidate { host: None } => {
                         if let ty::FnDef(def_id, _) = obligation.self_ty().skip_binder().kind() && tcx.trait_of_item(*def_id).is_some() {
                             // Trait methods are not seen as const unless the trait is implemented as const.
                             // We do not filter that out in here, but nested obligations will be needed to confirm this.
@@ -1905,7 +1905,7 @@ impl<'tcx> SelectionContext<'_, 'tcx> {
             }
 
             // Drop otherwise equivalent non-const fn pointer candidates
-            (FnPointerCandidate { .. }, FnPointerCandidate { is_const: false }) => DropVictim::Yes,
+            (FnPointerCandidate { .. }, FnPointerCandidate { host: None }) => DropVictim::Yes,
 
             (
                 ParamCandidate(ref other_cand),
@@ -2608,6 +2608,7 @@ impl<'tcx> SelectionContext<'_, 'tcx> {
             obligation.predicate.def_id(),
             self_ty,
             closure_sig,
+            None,
             util::TupleArgumentsFlag::No,
         )
         .map_bound(|(trait_ref, _)| trait_ref)
